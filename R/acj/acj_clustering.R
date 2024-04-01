@@ -747,7 +747,12 @@ EstimateCategFuncData_multinormial <- function(timestamps01, W, basis_size=25, m
   Z<-NULL
   prob<-array(0, c(num_indv, timeseries_length , 3))
   for (i in 1:num_indv){
-    fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cr", m=2, k = basis_size),
+    # fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cr", m=2, k = basis_size),
+    #                     ~s(timestamps01,bs = "cr", m=2, k = basis_size)),
+    #                family=multinom(K=2), method = method,
+    #                control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+    #                optimizer=c("outer","bfgs"))
+    fit_binom<-gam(list((W[,i]%%3) ~s(timestamps01,bs = "cr", m=2, k = basis_size),
                         ~s(timestamps01,bs = "cr", m=2, k = basis_size)),
                    family=multinom(K=2), method = method,
                    control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
@@ -1350,9 +1355,15 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # set.seed(123)
 # A_2_multinomial <- RunExperiment("A",2,"multinomial","test")
 
+# set.seed(123)
+# A_100_binomial <- RunExperiment("A",100,"binomial","paper1")
+
+# set.seed(123)
+# A_2_multinormial <- RunExperiment("A",2,"multinomial","test120")
+
 set.seed(123)
-A_100_binomial <- RunExperiment("A",100,"binomial","paper1")
- 
+B_100_binomial <- RunExperiment("B",100,"binomial","paper1B100")
+
  #save(C_2_probit,file="C_2_probit.RData")
 # set.seed(123)
 # A_100_probit <- RunExperiment("A",100,"probit")
