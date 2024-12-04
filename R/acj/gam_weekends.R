@@ -266,6 +266,123 @@ EstimateCategFuncData_multinormial_weekend <- function(timestamps01, W, basis_si
               weekend_vector_coef = weekend_vector_coef))
 }
 
+
+EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W, basis_size=25, method="ML")
+{
+  
+  
+  num_indv<- nrow(W)
+  timeseries_length <-ncol(W)
+  category_count <- length(unique(c(W)))
+  weekend_vector <- as.factor(c(rep(c(rep(0,480),rep(1,192)),4))[1:timeseries_length])
+  
+  Z<-NULL
+  # prob<-array(0, c(num_indv, timeseries_length , category_count))
+  # weekend_vector_coef <- matrix(0, num_indv, category_count-1)
+  #for (i in 1:num_indv){
+  
+  
+  Z_P_WeekendCoef <- foreach(i = 1:num_indv , .packages = c("mgcv")) %dorng%
+    
+    #T_rep <- foreach(this_row = 1:5) %dorng%
+    { #source("./source_code/R/data_generator.R")
+      
+      Z_P_WeekendCoef <- numeric(timeseries_length*(category_count+category_count-1)+category_count-1)
+  
+    print(i)
+    if ( length(table(W[i,])) == category_count) {
+      
+      fit_binom<-gam(list(W[i,]-1~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector,
+                          ~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector
+      ),
+      family=multinom(K=category_count-1), method = method,
+      control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+      optimizer=c("outer","bfgs")) 
+      #####
+      #print("Dino")
+      ####to find design matrix
+      g_design <- predict(fit_binom,type = "lpmatrix")
+      g_mul <- g_design[,c(1,category_count:basis_size)]
+      coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size)]
+      #extract z
+      z1 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+      #####
+      g_mul_2 <- g_design[,c(1,category_count:basis_size)+basis_size]
+      coef_fit_2 <- fit_binom$coefficients[c(1,category_count:basis_size)+basis_size]
+      z2 <- g_mul_2 %*% as.matrix(coef_fit_2,ncol=1)
+      
+      weekend_vector_coef <- fit_binom$coefficients[c(category_count-1,basis_size+category_count-1)]
+    } else {
+      if (names(table(W[i,]))[2]=="3"){
+        W[i,][W[i,]==3] <- 2
+        basis_size_rev <- max(min(round(min(unname(table(W[i,])[2]), sum(1-unname(table(W[i,])[2])))/2), basis_size ), 5)
+        fit_binom <- gam(W[i,]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+                         family = "binomial", method = method,
+                         control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+                         optimizer=c("outer","bfgs"))
+       # print("GODAK ADERI")
+        ######################
+        ####to find design matrix
+        g_design <- predict(fit_binom,type = "lpmatrix")
+        g_mul <- g_design[,c(1,category_count:basis_size_rev)]
+        coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size_rev)]
+        #extract z
+        z2 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+        #####
+        z1 <- rep(0,timeseries_length)
+        
+        weekend_vector_coef <- c(0, fit_binom$coefficients[category_count-1])
+        ##########################
+      }else {
+        basis_size_rev <- max(min(round(min(unname(table(W[i,])[2]), sum(1-unname(table(W[i,])[2])))/2), basis_size ), 5)
+        fit_binom <- gam(W[i,]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+                         family = "binomial", method = method,
+                         control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+                         optimizer=c("outer","bfgs"))
+        #print("MATA OYA NATHWA PALUI")
+        ######################
+        ####to find design matrix
+        g_design <- predict(fit_binom,type = "lpmatrix")
+        g_mul <- g_design[,c(1,category_count:basis_size_rev)]
+        coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size_rev)]
+        #extract z
+        z1 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+        z2 <- rep(0,timeseries_length)
+        weekend_vector_coef <- c(fit_binom$coefficients[category_count-1],0)
+        ##########################
+      }
+    } 
+    #2t*n matrix
+    Z<- cbind(Z, c(z1,z2))
+    ##find probability
+    Z_cbind=cbind(z1,z2)
+    exp_z=exp(Z_cbind)
+    denominator_p=1+exp_z[,1]+exp_z[,2]
+    p1 <- exp_z[,1]/denominator_p
+    p2 <- exp_z[,2]/denominator_p
+    p3=1/denominator_p
+    #3D matrix t*n*category 
+    #prob[i,,] <- cbind(p1, p2, p3)
+    # 5*t +2 length
+    Z_P_WeekendCoef <- c(z1,z2,p1,p2,p3, weekend_vector_coef)
+    
+    return(Z_P_WeekendCoef)
+
+}
+
+  Z_P_WeekendCoef <- do.call(rbind, Z_P_WeekendCoef)
+  #t*n
+  return(list(Z1_est=t(Z_P_WeekendCoef[,1:timeseries_length]), 
+              Z2_est=t(Z_P_WeekendCoef[,(1+timeseries_length):(2*timeseries_length)]),
+              p1_est=t(Z_P_WeekendCoef[,(1+timeseries_length*2):(3*timeseries_length)]), 
+              p2_est=t(Z_P_WeekendCoef[,(1+timeseries_length*3):(4*timeseries_length)]), 
+              p3_est=t(Z_P_WeekendCoef[,(1+timeseries_length*4):(5*timeseries_length)]) ,
+              weekend_vector_coef = Z_P_WeekendCoef[,(1+timeseries_length*(category_count+category_count-1)):dim(Z_P_WeekendCoef)[2]]))
+}
+
+
+
+
 ######test
 #EstimateCategFuncData_multinormial <- function(timestamps01, W, basis_size=25, method="ML")
 #3001
@@ -303,5 +420,20 @@ indiv_one_cat_3_once_check_if_work <- indiv_one_cat_3_once[indiv_one_cat_3_once>
 #53 of them, #21 that is 3374 doesnt work
 
 W_3_once_check_if_work <- W_matrix_final[indiv_one_cat_3_once_check_if_work,]
+source("time_track_function.R")
+timeKeeperStart("Check Parallel")
 test_mul_fail_check <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_3_once_check_if_work[22:dim(W_3_once_check_if_work)[1],], basis_size=25, method="ML")
 #sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
+timeKeeperNext() 
+
+timeKeeperStart("Check Parallel")
+test_mul_fail_check_parallel <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_3_once_check_if_work[22:dim(W_3_once_check_if_work)[1],], basis_size=25, method="ML")
+#sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
+timeKeeperNext() 
+
+#matplot(timestamps01, test_mul_fail_check$Z1_est - test_mul_fail_check_parallel$Z1_est, type="l")
+
+timeKeeperStart("Twitter all users except 14 has only 1 category, and two only has 3 one time")
+Twitter_ZP__WeekendCoeff_Final <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_matrix_final[-c(3001,3374),], basis_size=25, method="ML")
+timeKeeperNext() 
+save(Twitter_ZP__WeekendCoeff_Final, timestamps01, file = "Twitter_ZP__WeekendCoeff_Final.RData")
