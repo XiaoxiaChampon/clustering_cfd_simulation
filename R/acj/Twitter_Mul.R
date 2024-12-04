@@ -168,41 +168,18 @@ timeseries_length <- length(timestamps01)
 method <- "REML"
 category_count <- length(unique(c(W_matrix_final)))
 
-timeKeeperStart("Xiaoxia")
-zp <- foreach (indv = 1:num_indv, .combine = cbind, .init = NULL, .packages = c("mgcv", "refund")) %dorng%
-  {
-    #source("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/acj/gam_weekends.R")
-    source("gam_weekends.R")
-    
-    
-    # x1<- X[indv,,1]
-    # x2<- X[indv,,2]
-    # x3<- X[indv,,3]
-    
-    # x1 <- no_tweet_data[indv,]
-    # x2 <- tweet_no_mention_data[indv,]
-    # x3 <- tweet_mention_data[indv,]
-    #15 minutes, one day 24 hours is 96 data points, 5 days is 480 data points, two weekends days are 192 data points
-    # one week is 480+192 = 672 data points
-    #two week is 1344 data points
-    # three week is 2016 data points
-    #four week is 2688 data points
-    #maximum 2000 data points is 286 weeks
-    #weekend_vector <- c(rep(c(rep(0,480),rep(1,192)),4))[1:length(x1)]
-    
-    weekend_vector <- c(rep(c(rep(0,480),rep(1,192)),4))[96:(96+length(W_matrix_final)-1)]
-    
-    
-    # estimate the latent tranjecotries Z
-
-    return(c(c(z1,z2), cbind(p1/psum, p2/psum, p3/psum)))
-    #return(c(c(z1,z2), cbind(p1/(p1 + p2 + p3), p2/(p1 + p2 + p3), p3/(p1 + p2 + p3))))
-  }
+timeKeeperStart("Twitter all users except 14 has only 1 category, and two only has 3 one time")
+#W_matrix_final[-c(3001,3374),]  #3796
+# table(W_matrix_final[-c(3001,3374),][3796,])
+# 
+# 1    2    3 
+# 1985   10    5
+# Error in qr.default(if (d[1L] < d[2L]) t(z) else z) : 
+#   NA/NaN/Inf in foreign function call (arg 1)
+Twitter_ZP__WeekendCoeff_Final <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_matrix_final[-c(3001,3374),][-3796,], basis_size=25, method="ML")
+timeKeeperNext() 
 # Unravel the two variables from zp
-z_rows_count <- timeseries_length * 2
-Z <- array(zp[1:z_rows_count, ], c(z_rows_count, num_indv))
-p <- array(t(matrix(zp[(z_rows_count + 1):dim(zp)[1], ], ncol=num_indv)), c(num_indv, timeseries_length, category_count))
-timeKeeperNext()  
+ 
 Z1_est <- Z[1:timeseries_length,]
 Z2_est <- Z[1:timeseries_length+timeseries_length,]
 

@@ -381,31 +381,29 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
 }
 
 
-
-
 ######test
 #EstimateCategFuncData_multinormial <- function(timestamps01, W, basis_size=25, method="ML")
 #3001
-timestamps01 <- timestamps01
-test_mul <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_final, basis_size=25, method="ML")
-W_matrix_final_sub <- W_matrix_final[2999:dim(W_matrix_final)[1],]
-##3
-test_mul_fail <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_final_sub, basis_size=25, method="ML")
+# timestamps01 <- timestamps01
+# test_mul <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_final, basis_size=25, method="ML")
+# W_matrix_final_sub <- W_matrix_final[2999:dim(W_matrix_final)[1],]
+# ##3
+# test_mul_fail <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_final_sub, basis_size=25, method="ML")
 
 #which(W_matrix_final_sub[3,]==3) #761 #not work
 #Error in qr.default(if (d[1L] < d[2L]) t(z) else z) : 
 #NA/NaN/Inf in foreign function call (arg 1)
 #save(W_matrix,W_matrix_final, W_matrix_final_sub, W_sample_2, file = "W_matrix_samples.RData")
 #load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/acj/W_matrix_samples.RData")
-indiv_one_cat_3_once <- which(apply(W_matrix_final , 1, function(row){length(table(row)) == 3 && min(table(row)) == 1}))
-#233 has 3 category but only 3 only appears 1 time , 14 only has 1 category
-W_matrix_atleast2cat_3atleast2 <- W_matrix_final[-c(indiv_one_cat_3_once),]
-save(W_matrix,W_matrix_final, W_matrix_final_sub, W_sample_2,W_matrix_atleast2cat_3atleast2, 
-     indiv_one_cat_3_once, indiv_one_cat, file = "W_matrix_samples.RData")
-
-#which(W_matrix_final[24,]==3), 1575  #works
-test_mul_fail_1 <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_atleast2cat_3atleast2, basis_size=25, method="ML")
-# indiv_one_cat_3_once
+# indiv_one_cat_3_once <- which(apply(W_matrix_final , 1, function(row){length(table(row)) == 3 && min(table(row)) == 1}))
+# #233 has 3 category but only 3 only appears 1 time , 14 only has 1 category
+# W_matrix_atleast2cat_3atleast2 <- W_matrix_final[-c(indiv_one_cat_3_once),]
+# save(W_matrix,W_matrix_final, W_matrix_final_sub, W_sample_2,W_matrix_atleast2cat_3atleast2, 
+#      indiv_one_cat_3_once, indiv_one_cat, file = "W_matrix_samples.RData")
+# 
+# #which(W_matrix_final[24,]==3), 1575  #works
+# test_mul_fail_1 <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_atleast2cat_3atleast2, basis_size=25, method="ML")
+# # indiv_one_cat_3_once
 # [1]   24   25   30   58   63   73   81   86   90  117  118  128  140  155  156  164  170  179  184  189  200  202  207  209
 # [25]  212  222  230  238  241  262  287  288  291  298  305  366  381  386  388  400  410  424  439  440  454  553  554  561
 # [49]  575  591  615  622  626  628  634  651  665  678  728  732  740  772  781  784  796  797  806  815  835  845  854  876
@@ -416,24 +414,38 @@ test_mul_fail_1 <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_m
 # [169] 2780 2786 2802 2841 2874 2916 2931 2955 2959 2977 2984 3001 3029 3046 3057 3061 3062 3111 3117 3134 3135 3136 3143 3145
 # [193] 3162 3166 3198 3199 3216 3338 3341 3349 3374 3392 3424 3469 3470 3480 3515 3525 3526 3528 3539 3541 3567 3583 3594 3596
 # [217] 3599 3601 3617 3638 3733 3768 3769 3770 3779 3783 3790 3793 3808 3812 3814 3832 3845
-indiv_one_cat_3_once_check_if_work <- indiv_one_cat_3_once[indiv_one_cat_3_once>3001]
+#indiv_one_cat_3_once_check_if_work <- indiv_one_cat_3_once[indiv_one_cat_3_once>3001]
 #53 of them, #21 that is 3374 doesnt work
 
-W_3_once_check_if_work <- W_matrix_final[indiv_one_cat_3_once_check_if_work,]
-source("time_track_function.R")
-timeKeeperStart("Check Parallel")
-test_mul_fail_check <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_3_once_check_if_work[22:dim(W_3_once_check_if_work)[1],], basis_size=25, method="ML")
-#sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
-timeKeeperNext() 
-
-timeKeeperStart("Check Parallel")
-test_mul_fail_check_parallel <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_3_once_check_if_work[22:dim(W_3_once_check_if_work)[1],], basis_size=25, method="ML")
-#sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
-timeKeeperNext() 
+# W_3_once_check_if_work <- W_matrix_final[indiv_one_cat_3_once_check_if_work,]
+# source("time_track_function.R")
+# timeKeeperStart("Check Non Parallel")
+# test_mul_fail_check <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_3_once_check_if_work[22:dim(W_3_once_check_if_work)[1],], basis_size=25, method="ML")
+# #sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
+# timeKeeperNext() 
+# 
+# timeKeeperStart("Check Parallel")
+# test_mul_fail_check_parallel <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_3_once_check_if_work[22:dim(W_3_once_check_if_work)[1],], basis_size=25, method="ML")
+# #sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
+# timeKeeperNext() 
 
 #matplot(timestamps01, test_mul_fail_check$Z1_est - test_mul_fail_check_parallel$Z1_est, type="l")
 
-timeKeeperStart("Twitter all users except 14 has only 1 category, and two only has 3 one time")
-Twitter_ZP__WeekendCoeff_Final <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_matrix_final[-c(3001,3374),], basis_size=25, method="ML")
-timeKeeperNext() 
-save(Twitter_ZP__WeekendCoeff_Final, timestamps01, file = "Twitter_ZP__WeekendCoeff_Final.RData")
+#timeKeeperStart("Twitter all users except 14 has only 1 category, and two only has 3 one time")
+#W_matrix_final[-c(3001,3374),]  #3796
+# table(W_matrix_final[-c(3001,3374),][3796,])
+# 
+# 1    2    3 
+# 1985   10    5
+# Error in qr.default(if (d[1L] < d[2L]) t(z) else z) : 
+#   NA/NaN/Inf in foreign function call (arg 1)
+# Twitter_ZP__WeekendCoeff_Final <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_matrix_final[-c(3001,3374),][-3796,], basis_size=25, method="ML")
+# timeKeeperNext() 
+# W_data_used <- W_matrix_final[-c(3001,3374),][-3796,]
+# index_exclude <- c(c(3001,3374),3796 )
+# save(Twitter_ZP__WeekendCoeff_Final, timestamps01, 
+#      W_data_used, W_matrix_final, index_exclude, file = "Twitter_ZP__WeekendCoeff_Final.RData")
+# -------------------
+#   Twitter all users except 14 has only 1 category, and two only has 3 one time 
+# took: Time difference of 5.322264 mins 
+# ====================
