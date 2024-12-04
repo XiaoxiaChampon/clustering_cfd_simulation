@@ -1,4 +1,7 @@
 
+
+
+
 # library("pracma")
 
 #Function to find the L2 distance between two latent curves
@@ -35,3 +38,4 @@ trapzfnump <- function(yy,yy2,timestamps01)
   out=sqrt(trapz(x, (sqrt(y1)-sqrt(y2))^2) )
   return(out)
 }
+

@@ -1162,9 +1162,7 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
   dir.create(temp_folder)
   print(temp_folder)
   
-  # scenario="C"
-  # num_replicas=3
-  # est_choice="probit"
+ 
   n100t300C <- ClusterSimulation(100,300,scenario,num_replicas,est_choice,TRUE,temp_folder)
   n100t750C <- ClusterSimulation(100,750,scenario,num_replicas,est_choice,TRUE,temp_folder)
   n100t2000C <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)

@@ -401,7 +401,7 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
       while (count_iter < 100 && 
              ( (numcat < length(Q_vals))
               ||(timeseries_length==300  && min(as.numeric(tolcat)) <4)
-              ||(timeseries_length==750  && min(as.numeric(tolcat)) <6)
+              ||(timeseries_length==750  && min(as.numeric(tolcat)) <10)
              )
              )
       {
@@ -518,172 +518,178 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
       est_fadp <- cbind(est_fadp, est_fadp_temp)
       
       cat("Done replica:", replica_idx, "\n")
-    }# END of "for(replica_idx in 1:num_replicas)'
+      } # End for est_choice_list
+      
+  }# END of "for(replica_idx in 1:num_replicas)'
   
-    cat("\n replicas done \n")
+  cat("\n replicas done \n")
+  
+  if (run_hellinger)
+  {
+    # Assess accuracy in the simulation study
+    mse_sim= apply(rmse, c(2,3), mean)
+    hellinger_sim= apply(hellinger, c(2,3), mean)
+  }
+
+  ### Code could be simplified into a loop???
+  ###truth
+    #dbscan
+    true_dbscan_ri=apply(true_dbscan, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri)
+    true_dbscan_ari=apply(true_dbscan, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari)
+    true_dbscan_cpn=apply(true_dbscan, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn)
+   #dbscan cfda
+   true_dbscan_ri_cfda=apply(true_dbscan_cfda, 2, function(cluster)
+     evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri)
+   true_dbscan_ari_cfda=apply(true_dbscan_cfda, 2, function(cluster)
+     evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari)
+   true_dbscan_cpn_cfda=apply(true_dbscan_cfda, 2, function(cluster)
+     evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn)
+
+    ###kmeans
+    true_kmeans_ri=apply(true_kmeans, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri)
+    true_kmeans_ari=apply(true_kmeans, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari)
+    true_kmeans_cpn=apply(true_kmeans, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn)
+
+    #fadp
+    true_fadp_ri=apply(true_fadp, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri)
+    true_fadp_ari=apply(true_fadp, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari)
+    true_fadp_cpn=apply(true_fadp, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn)
+  
+  
+  
+ #####estimate results
+    #dbscan
+    est_dbscan_ri=apply(est_dbscan, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri)
+    est_dbscan_ari=apply(est_dbscan, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari)
+    est_dbscan_cpn=apply(est_dbscan, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn)
+    #dbscan cfda
+    est_dbscan_ri_cfda=apply(est_dbscan_cfda, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri)
+    est_dbscan_ari_cfda=apply(est_dbscan_cfda, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari)
+    est_dbscan_cpn_cfda=apply(est_dbscan_cfda, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn)
+    ###kmeans
+    est_kmeans_ri=apply(est_kmeans, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri)
+    est_kmeans_ari=apply(est_kmeans, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari)
+    est_kmeans_cpn=apply(est_kmeans, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn)
     
-    if (run_hellinger)
-    {
-      # Assess accuracy in the simulation study
-      mse_sim= apply(rmse, c(2,3), mean)
-      hellinger_sim= apply(hellinger, c(2,3), mean)
-    }
-  
-    ### Code could be simplified into a loop???
-    results <- list(
-      #dbscan
-      true_dbscan_ri=apply(true_dbscan, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri),
-      true_dbscan_ari=apply(true_dbscan, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari),
-      true_dbscan_cpn=apply(true_dbscan, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn),
-  
-      est_dbscan_ri=apply(est_dbscan, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri),
-      est_dbscan_ari=apply(est_dbscan, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari),
-      est_dbscan_cpn=apply(est_dbscan, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn),
-     #dbscan cfda
-     true_dbscan_ri_cfda=apply(true_dbscan_cfda, 2, function(cluster)
-       evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri),
-     true_dbscan_ari_cfda=apply(true_dbscan_cfda, 2, function(cluster)
-       evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari),
-     true_dbscan_cpn_cfda=apply(true_dbscan_cfda, 2, function(cluster)
-       evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn),
-  
-  
-     est_dbscan_ri_cfda=apply(est_dbscan_cfda, 2, function(cluster)
-       evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ri),
-     est_dbscan_ari_cfda=apply(est_dbscan_cfda, 2, function(cluster)
-       evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$ari),
-     est_dbscan_cpn_cfda=apply(est_dbscan_cfda, 2, function(cluster)
-       evaluate_cluster(true_cluster=true_cluster_db, new_cluster=cluster,0)$cpn),
-      ###kmeans
-      true_kmeans_ri=apply(true_kmeans, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri),
-      true_kmeans_ari=apply(true_kmeans, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari),
-      true_kmeans_cpn=apply(true_kmeans, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn),
+    #fadp
+    est_fadp_ri=apply(est_fadp, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri)
+    est_fadp_ari=apply(est_fadp, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari)
+    est_fadp_cpn=apply(est_fadp, 2, function(cluster)
+      evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn)
+    
   
   
   
-      est_kmeans_ri=apply(est_kmeans, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri),
-      est_kmeans_ari=apply(est_kmeans, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari),
-      est_kmeans_cpn=apply(est_kmeans, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn),
-  
-      #fadp
-      true_fadp_ri=apply(true_fadp, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri),
-      true_fadp_ari=apply(true_fadp, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari),
-      true_fadp_cpn=apply(true_fadp, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn),
-  
-  
-      est_fadp_ri=apply(est_fadp, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ri),
-      est_fadp_ari=apply(est_fadp, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$ari),
-      est_fadp_cpn=apply(est_fadp, 2, function(cluster)
-        evaluate_cluster(true_cluster=true_cluster, new_cluster=cluster,3)$cpn)
-  
-    )
-  
-    print("cluster_table")
-     cluster_table_true=c(mean(results$true_dbscan_ri_cfda),
-                         mean(results$true_dbscan_ari_cfda),
-                         mean(results$true_dbscan_cpn_cfda),
+
+  print("cluster_table")
+   cluster_table_true=c(mean(true_dbscan_ri_cfda),
+                       mean(true_dbscan_ari_cfda),
+                       mean(true_dbscan_cpn_cfda),
+                       
+                       mean(true_fadp_ri),
+                       mean(true_fadp_ari),
+                       mean(true_fadp_cpn),
+                       
+                       mean(true_kmeans_ri),
+                       mean(true_kmeans_ari),
+                       mean(true_kmeans_cpn),
+
+                       mean(true_dbscan_ri),
+                       mean(true_dbscan_ari),
+                       mean(true_dbscan_cpn)
+  )
+  names(cluster_table_true)=c("cfda-db RI","cfda-db ARI","cfda-db cpn",
+                              "fadp RI","fadp ARI","fadp cpn",
+                              "kmeans RI","kmeans ARI","kmeans cpn",
+                              "dbscan RI","dbscan ARI","dbscan cpn"
+                              )
+
+  cluster_table_est=c( mean(est_dbscan_ri_cfda),
+                       mean(est_dbscan_ari_cfda),
+                       mean(est_dbscan_cpn_cfda),
+
+                      mean(est_fadp_ri),
+                      mean(est_fadp_ari),
+                      mean(est_fadp_cpn),
+
+                      mean(est_kmeans_ri),
+                      mean(est_kmeans_ari),
+                      mean(est_kmeans_cpn),
+                      
+                      mean(est_dbscan_ri),
+                      mean(est_dbscan_ari),
+                      mean(est_dbscan_cpn)
+  )
+  names(cluster_table_est)=c("cfda-db RI","cfda-db ARI","cfda-db cpn",
+                              "fadp RI","fadp ARI","fadp cpn",
+                             "kmeans RI","kmeans ARI","kmeans cpn",
+                             "dbscan RI","dbscan ARI","dbscan cpn"
+                            )
+
+
+  cluster_table_est_se=c(sd(est_dbscan_ri_cfda)/sqrt(num_replicas),
+                         sd(est_dbscan_ari_cfda)/sqrt(num_replicas),
+                         sd(est_dbscan_cpn_cfda)/sqrt(num_replicas),
+                          
+                          sd(est_fadp_ri)/sqrt(num_replicas),
+                         sd(est_fadp_ari)/sqrt(num_replicas),
+
+                         sd(est_fadp_cpn)/sqrt(num_replicas),
+
+
+                         sd(est_kmeans_ri)/sqrt(num_replicas),
+                         sd(est_kmeans_ari)/sqrt(num_replicas),
+                         sd(est_kmeans_cpn)/sqrt(num_replicas),
                          
-                         mean(results$true_fadp_ri),
-                         mean(results$true_fadp_ari),
-                         mean(results$true_fadp_cpn),
-                         
-                         mean(results$true_kmeans_ri),
-                         mean(results$true_kmeans_ari),
-                         mean(results$true_kmeans_cpn),
-  
-                         mean(results$true_dbscan_ri),
-                         mean(results$true_dbscan_ari),
-                         mean(results$true_dbscan_cpn)
-    )
-    names(cluster_table_true)=c("cfda-db RI","cfda-db ARI","cfda-db cpn",
+                         sd(est_dbscan_ri)/sqrt(num_replicas),
+                         sd(est_dbscan_ari)/sqrt(num_replicas),
+                         sd(est_dbscan_cpn)/sqrt(num_replicas))
+  names(cluster_table_est_se)=c("cfda-db RI","cfda-db ARI","cfda-db cpn",
                                 "fadp RI","fadp ARI","fadp cpn",
                                 "kmeans RI","kmeans ARI","kmeans cpn",
-                                "dbscan RI","dbscan ARI","dbscan cpn"
-                                )
+                                "dbscan RI","dbscan ARI","dbscan cpn")
+  print("returning")
   
-    cluster_table_est=c( mean(results$est_dbscan_ri_cfda),
-                         mean(results$est_dbscan_ari_cfda),
-                         mean(results$est_dbscan_cpn_cfda),
+  save(time_elapsed, total_regens, file=file.path(temp_folder, paste("time_elapsed_", num_indvs, "_", timeseries_length, "_",
+                                scenario, "_", num_replicas, "_", est_choice, "_", run_hellinger, ".RData", sep="")))
   
-                        mean(results$est_fadp_ri),
-                        mean(results$est_fadp_ari),
-                        mean(results$est_fadp_cpn),
+  est_values <- list("cluster_table_est"=cluster_table_est,
+                      "cluster_table_est_se"=cluster_table_est_se,
+                      "Z_est_curves"=Z_est_curve,
+                      "p_est_curves"=p_est_curve)
   
-                        mean(results$est_kmeans_ri),
-                        mean(results$est_kmeans_ari),
-                        mean(results$est_kmeans_cpn),
-                        
-                        mean(results$est_dbscan_ri),
-                        mean(results$est_dbscan_ari),
-                        mean(results$est_dbscan_cpn)
-    )
-    names(cluster_table_est)=c("cfda-db RI","cfda-db ARI","cfda-db cpn",
-                                "fadp RI","fadp ARI","fadp cpn",
-                               "kmeans RI","kmeans ARI","kmeans cpn",
-                               "dbscan RI","dbscan ARI","dbscan cpn"
-                              )
+  if (run_hellinger)
+  {
+    est_values$mse <- mse_sim
+    est_values$hellinger <- hellinger_sim
+  }
   
+  save(est_values, file=file.path(temp_folder, paste("ClusterSim_", num_indvs, "_", timeseries_length, "_",
+                                                      scenario, "_", num_replicas, "_", est_choice, "_", run_hellinger, ".RData", sep="")))
   
-    cluster_table_est_se=c(sd(results$est_dbscan_ri_cfda)/sqrt(num_replicas),
-                           sd(results$est_dbscan_ari_cfda)/sqrt(num_replicas),
-                           sd(results$est_dbscan_cpn_cfda)/sqrt(num_replicas),
-                            
-                            sd(results$est_fadp_ri)/sqrt(num_replicas),
-                           sd(results$est_fadp_ari)/sqrt(num_replicas),
+  return_vals[est_choice] = est_values
   
-                           sd(results$est_fadp_cpn)/sqrt(num_replicas),
-  
-  
-                           sd(results$est_kmeans_ri)/sqrt(num_replicas),
-                           sd(results$est_kmeans_ari)/sqrt(num_replicas),
-                           sd(results$est_kmeans_cpn)/sqrt(num_replicas),
-                           
-                           sd(results$est_dbscan_ri)/sqrt(num_replicas),
-                           sd(results$est_dbscan_ari)/sqrt(num_replicas),
-                           sd(results$est_dbscan_cpn)/sqrt(num_replicas))
-    names(cluster_table_est_se)=c("cfda-db RI","cfda-db ARI","cfda-db cpn",
-                                  "fadp RI","fadp ARI","fadp cpn",
-                                  "kmeans RI","kmeans ARI","kmeans cpn",
-                                  "dbscan RI","dbscan ARI","dbscan cpn")
-    print("returning")
-    
-    save(time_elapsed, total_regens, file=file.path(temp_folder, paste("time_elapsed_", num_indvs, "_", timeseries_length, "_",
-                                  scenario, "_", num_replicas, "_", est_choice, "_", run_hellinger, ".RData", sep="")))
-    
-    est_values <- list("cluster_table_est"=cluster_table_est,
-                        "cluster_table_est_se"=cluster_table_est_se,
-                        "Z_est_curves"=Z_est_curve,
-                        "p_est_curves"=p_est_curve)
-    
-    if (run_hellinger)
-    {
-      est_values$mse <- mse_sim
-      est_vals$hellinger <- hellinger_sim
-    }
-    
-    save(est_vals, file=file.path(temp_folder, paste("ClusterSim_", num_indvs, "_", timeseries_length, "_",
-                                                        scenario, "_", num_replicas, "_", est_choice, "_", run_hellinger, ".RData", sep="")))
-    
-    return_vals[est_choice] = est_values
-    
-  } # End for est_choice_list
+
   
   return_vals["cluster_table_true"] = cluster_table_true
   return_vals["Z_true_curves"] = Z_true_curve
@@ -753,12 +759,16 @@ EstimateCategFuncData_multinormial <- function(timestamps01, W, basis_size=25, m
   Z<-NULL
   prob<-array(0, c(num_indv, timeseries_length , 3))
   for (i in 1:num_indv){
-    fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cr", m=2, k = basis_size),
+    # fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cr", m=2, k = basis_size),
+    #                     ~s(timestamps01,bs = "cr", m=2, k = basis_size)),
+    #                family=multinom(K=2), method = method,
+    #                control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+    #                optimizer=c("outer","bfgs")) 
+    fit_binom<-gam(list((W[,i]%%3)~s(timestamps01,bs = "cr", m=2, k = basis_size),
                         ~s(timestamps01,bs = "cr", m=2, k = basis_size)),
                    family=multinom(K=2), method = method,
                    control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
                    optimizer=c("outer","bfgs")) 
-   
     z1<- fit_binom$linear.predictors[,1]
     z2<- fit_binom$linear.predictors[,2]
     Z<- cbind(Z, c(z1,z2))
@@ -1345,14 +1355,14 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 #  A_2_mul <- RunExperiment("A",2,"multinormial")
 # 
 
- set.seed(123)
- A_2_probit <- RunExperiment("A",2,"probit","test")
+ # set.seed(123)
+ # A_2_probit <- RunExperiment("A",2,"probit","test")
+ # 
+ # set.seed(123)
+ # A_2_binomial <- RunExperiment("A",2,"binomial","test")
  
  set.seed(123)
- A_2_binomial <- RunExperiment("A",2,"binomial","test")
- 
- set.seed(123)
- A_2_multinomial <- RunExperiment("A",2,"multinomial","test")
+ A_2_multinomial_new <- RunExperiment("A",2,"multinomial","test")
  
  #save(C_2_probit,file="C_2_probit.RData")
 # set.seed(123)
