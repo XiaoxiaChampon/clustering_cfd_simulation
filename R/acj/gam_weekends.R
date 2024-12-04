@@ -192,6 +192,8 @@ EstimateCategFuncData_multinormial_weekend <- function(timestamps01, W, basis_si
       family=multinom(K=category_count-1), method = method,
       control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
       optimizer=c("outer","bfgs")) 
+      #####
+      print("Dino")
       ####to find design matrix
       g_design <- predict(fit_binom,type = "lpmatrix")
       g_mul <- g_design[,c(1,category_count:basis_size)]
@@ -212,7 +214,7 @@ EstimateCategFuncData_multinormial_weekend <- function(timestamps01, W, basis_si
                          family = "binomial", method = method,
                          control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
                          optimizer=c("outer","bfgs"))
-        
+        print("GODAK ADERI")
         ######################
         ####to find design matrix
         g_design <- predict(fit_binom,type = "lpmatrix")
@@ -231,7 +233,7 @@ EstimateCategFuncData_multinormial_weekend <- function(timestamps01, W, basis_si
                          family = "binomial", method = method,
                          control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
                          optimizer=c("outer","bfgs"))
-        
+        print("MATA OYA NATHWA PALUI")
         ######################
         ####to find design matrix
         g_design <- predict(fit_binom,type = "lpmatrix")
@@ -266,5 +268,38 @@ EstimateCategFuncData_multinormial_weekend <- function(timestamps01, W, basis_si
 
 ######test
 #EstimateCategFuncData_multinormial <- function(timestamps01, W, basis_size=25, method="ML")
+#3001
 timestamps01 <- timestamps01
 test_mul <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_final, basis_size=25, method="ML")
+W_matrix_final_sub <- W_matrix_final[2999:dim(W_matrix_final)[1],]
+##3
+test_mul_fail <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_final_sub, basis_size=25, method="ML")
+
+#which(W_matrix_final_sub[3,]==3) #761 #not work
+#Error in qr.default(if (d[1L] < d[2L]) t(z) else z) : 
+#NA/NaN/Inf in foreign function call (arg 1)
+#save(W_matrix,W_matrix_final, W_matrix_final_sub, W_sample_2, file = "W_matrix_samples.RData")
+#load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/acj/W_matrix_samples.RData")
+indiv_one_cat_3_once <- which(apply(W_matrix_final , 1, function(row){length(table(row)) == 3 && min(table(row)) == 1}))
+#233 has 3 category but only 3 only appears 1 time , 14 only has 1 category
+W_matrix_atleast2cat_3atleast2 <- W_matrix_final[-c(indiv_one_cat_3_once),]
+save(W_matrix,W_matrix_final, W_matrix_final_sub, W_sample_2,W_matrix_atleast2cat_3atleast2, 
+     indiv_one_cat_3_once, indiv_one_cat, file = "W_matrix_samples.RData")
+
+#which(W_matrix_final[24,]==3), 1575  #works
+test_mul_fail_1 <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_matrix_atleast2cat_3atleast2, basis_size=25, method="ML")
+# indiv_one_cat_3_once
+# [1]   24   25   30   58   63   73   81   86   90  117  118  128  140  155  156  164  170  179  184  189  200  202  207  209
+# [25]  212  222  230  238  241  262  287  288  291  298  305  366  381  386  388  400  410  424  439  440  454  553  554  561
+# [49]  575  591  615  622  626  628  634  651  665  678  728  732  740  772  781  784  796  797  806  815  835  845  854  876
+# [73]  895  913  920 1341 1487 1491 1494 1528 1543 1704 1801 1811 1835 1837 1842 1909 1915 1918 1921 1923 1933 1961 1973 1988
+# [97] 1991 1994 2002 2011 2017 2025 2040 2055 2081 2084 2153 2156 2167 2176 2180 2208 2230 2256 2268 2287 2300 2305 2307 2311
+# [121] 2314 2331 2341 2343 2354 2356 2359 2376 2378 2380 2398 2417 2419 2436 2438 2444 2459 2463 2471 2476 2479 2482 2495 2498
+# [145] 2499 2502 2528 2546 2568 2569 2571 2582 2595 2605 2610 2619 2638 2684 2706 2707 2711 2713 2716 2729 2737 2739 2753 2754
+# [169] 2780 2786 2802 2841 2874 2916 2931 2955 2959 2977 2984 3001 3029 3046 3057 3061 3062 3111 3117 3134 3135 3136 3143 3145
+# [193] 3162 3166 3198 3199 3216 3338 3341 3349 3374 3392 3424 3469 3470 3480 3515 3525 3526 3528 3539 3541 3567 3583 3594 3596
+# [217] 3599 3601 3617 3638 3733 3768 3769 3770 3779 3783 3790 3793 3808 3812 3814 3832 3845
+indiv_one_cat_3_once_check_if_work <- indiv_one_cat_3_once[indiv_one_cat_3_once>3001]
+#53 of them
+W_3_once_check_if_work <- W_matrix_final[indiv_one_cat_3_once_check_if_work,]
+test_mul_fail_check <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_3_once_check_if_work, basis_size=25, method="ML")
