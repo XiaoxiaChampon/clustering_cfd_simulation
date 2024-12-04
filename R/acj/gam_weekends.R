@@ -300,6 +300,8 @@ test_mul_fail_1 <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_m
 # [193] 3162 3166 3198 3199 3216 3338 3341 3349 3374 3392 3424 3469 3470 3480 3515 3525 3526 3528 3539 3541 3567 3583 3594 3596
 # [217] 3599 3601 3617 3638 3733 3768 3769 3770 3779 3783 3790 3793 3808 3812 3814 3832 3845
 indiv_one_cat_3_once_check_if_work <- indiv_one_cat_3_once[indiv_one_cat_3_once>3001]
-#53 of them
+#53 of them, #21 that is 3374 doesnt work
+
 W_3_once_check_if_work <- W_matrix_final[indiv_one_cat_3_once_check_if_work,]
-test_mul_fail_check <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_3_once_check_if_work, basis_size=25, method="ML")
+test_mul_fail_check <- EstimateCategFuncData_multinormial_weekend (timestamps01, W_3_once_check_if_work[22:dim(W_3_once_check_if_work)[1],], basis_size=25, method="ML")
+#sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
