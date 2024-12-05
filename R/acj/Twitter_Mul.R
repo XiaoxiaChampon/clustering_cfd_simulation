@@ -136,20 +136,20 @@ if(run_parallel)
 # X_i2_full <- load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/submission_code/X_i2full.RData")
 # X_i3_full <- load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/submission_code/X_i3full.RData")
 
-X_i1_full <- load("X_i1full.RData")
-X_i2_full <- load("X_i2full.RData")
-X_i3_full <- load("X_i3full.RData")
-
-no_tweet_data <- X_i1f
-tweet_no_mention_data <- X_i2f
-tweet_mention_data <- X_i3f
-
-rm(X_i1f)
-rm(X_i2f)
-rm(X_i3f)
-
-array_3D <- abind(no_tweet_data, tweet_no_mention_data, tweet_mention_data, along = 3)
-W_matrix <- array_3D[,,3] * 3 +  array_3D[,,2] * 2 + array_3D[,,1]
+# X_i1_full <- load("X_i1full.RData")
+# X_i2_full <- load("X_i2full.RData")
+# X_i3_full <- load("X_i3full.RData")
+# 
+# no_tweet_data <- X_i1f
+# tweet_no_mention_data <- X_i2f
+# tweet_mention_data <- X_i3f
+# 
+# rm(X_i1f)
+# rm(X_i2f)
+# rm(X_i3f)
+# 
+# array_3D <- abind(no_tweet_data, tweet_no_mention_data, tweet_mention_data, along = 3)
+# W_matrix <- array_3D[,,3] * 3 +  array_3D[,,2] * 2 + array_3D[,,1]
 
 #sample_W <- matrix(sample(c(1,2,3), 300 *10, replace = TRUE), ncol= 300, nrow= 10)
 #estimate z and p
@@ -158,16 +158,10 @@ W_matrix <- array_3D[,,3] * 3 +  array_3D[,,2] * 2 + array_3D[,,1]
 source("gam_weekends.R")
 source("time_track_function.R")
 
-indiv_one_cat <- which(apply(W_matrix , 1, function(row){length(table(row)) == 1}))
-W_matrix_final <- W_matrix[-c(indiv_one_cat),]
-
-num_indv <- dim(W_matrix_final)[1]
-timestamps01 <- as.numeric(noquote(colnames(W_matrix)))
-basis_size <- 25 
-timeseries_length <- length(timestamps01)
-method <- "REML"
-category_count <- length(unique(c(W_matrix_final)))
-
+# indiv_one_cat <- which(apply(W_matrix , 1, function(row){length(table(row)) == 1}))
+# W_matrix_final <- W_matrix[-c(indiv_one_cat),]
+load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/time_stamp.RData")
+timestamps01  <- t
 timeKeeperStart("Twitter all users except 14 has only 1 category, and two only has 3 one time")
 #W_matrix_final[-c(3001,3374),]  #3796
 # table(W_matrix_final[-c(3001,3374),][3796,])
@@ -176,115 +170,54 @@ timeKeeperStart("Twitter all users except 14 has only 1 category, and two only h
 # 1985   10    5
 # Error in qr.default(if (d[1L] < d[2L]) t(z) else z) : 
 #   NA/NaN/Inf in foreign function call (arg 1)
-Twitter_ZP__WeekendCoeff_Final <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_matrix_final[-c(3001,3374),][-3796,], basis_size=25, method="ML")
+Twitter_ZP__WeekendCoeff_Final_Unique_Time <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, W_matrix_final[-c(3001,3374),][-3796,], basis_size=25, method="ML")
 timeKeeperNext() 
+W_data_used <- W_matrix_final[-c(3001,3374),][-3796,]
+index_exclude <- c(c(3001,3374),3796 )
+save(Twitter_ZP__WeekendCoeff_Final_Unique_Time, timestamps01, 
+     W_data_used, W_matrix_final, index_exclude, file = "Twitter_ZP__WeekendCoeff_Final_Unique_Time.RData")
 # Unravel the two variables from zp
- 
-Z1_est <- Z[1:timeseries_length,]
-Z2_est <- Z[1:timeseries_length+timeseries_length,]
+load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/acj/Twitter_ZP__WeekendCoeff_Final_Unique_Time.RData")
+#t*n
+Z1_est <- Twitter_ZP__WeekendCoeff_Final_Unique_Time$Z1_est
+Z2_est <- Twitter_ZP__WeekendCoeff_Final_Unique_Time$Z2_est
 
-p1_est <- t(p[,,1])
-p2_est <- t(p[,,2])
-p3_est <- t(p[,,3])
+p1_est <- Twitter_ZP__WeekendCoeff_Final_Unique_Time$p1_est
+p2_est <- Twitter_ZP__WeekendCoeff_Final_Unique_Time$p2_est
+p3_est <- Twitter_ZP__WeekendCoeff_Final_Unique_Time$p3_est
 
+weekend_vector_coef_matrix <- Twitter_ZP__WeekendCoeff_Final_Unique_Time$weekend_vector_coef
 #save(Z1_est, Z2_est, p1_est, p2_est, p3_est, timestamps01 , index_remove, file = "Twitter_Est.RData")
-save(Z1_est, Z2_est, p1_est, p2_est, p3_est, timestamps01 ,  file = "Twitter_Est.RData")
-load("Twitter_Est.RData")
+save(Z1_est, Z2_est, p1_est, p2_est, p3_est, timestamps01 , weekend_vector_coef_matrix, file = "Twitter_Est_Mul.RData")
+#load("Twitter_Est.RData")
 
-
-load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/acj/Twitter_Est.RData")
-
-#find columns that has na vlues
-cols_with_na <- apply(Z1_est, 2, function(x) any(is.na(x)))
-which_columns <- which(cols_with_na)  # Get column indices
-print(which_columns)
-
-cols_with_inf <- apply(Z1_est, 2, function(x) any((x==-Inf)))
-which_columns <- which(cols_with_inf)  # Get column indices
-print(which_columns)
-# 1942 2309 2365 2721 3033 3274 3469
-
-cols_with_inf1 <- apply(Z1_est, 2, function(x) any((x==Inf)))
-which_columns1 <- which(cols_with_inf1)  # Get column indices
-print(which_columns1)
-
-
-cols_with_inf2 <- apply(Z2_est, 2, function(x) any((x==-Inf)))
-which_columns2 <- which(cols_with_inf2)  # Get column indices
-print(which_columns2)
-
-cols_with_inf22 <- apply(Z2_est, 2, function(x) any((x==Inf)))
-which_columns22 <- which(cols_with_inf22)  # Get column indices
-print(which_columns22)
+cols_with_z1 <- apply(Z1_est, 2, function(x) any((x<  -200)))
+which_columns1 <- which(cols_with_z1)  # Get column indices
+print(length(which_columns1))
+# 11
+cols_with_z2 <- apply(Z2_est, 2, function(x) any((x< -200)))
+which_columns2 <- which(cols_with_z2)  # Get column indices
+print(length(which_columns2))
+#18
 
 par(mfrow = c(1,2))
-matplot(timestamps01,Z1_est[,-c(which_columns)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "Z1")
-matplot(timestamps01,Z2_est[,-c(which_columns)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "Z2")
-
-cols_with_large <- apply(Z1_est, 2, function(x) any((x>200)))
-which_columns_large <- which(cols_with_large)  # Get column indices
-print(which_columns_large)
-#380
-
-cols_with_largerz2 <- apply(Z2_est, 2, function(x) any((x>250 )))
-which_columnsz2 <- which(cols_with_largerz2)  # Get column indices
-print(which_columnsz2)
-#380
-
-cols_with_largerz22 <- apply(Z2_est, 2, function(x) any((x< -400 )))
-which_columnsz22 <- which(cols_with_largerz22)  # Get column indices
-print(which_columnsz22)
-
-save(timestamps01, Z1_est, Z2_est,which_columns, which_columns_large, which_columnsz22, file ="twitter_est_extreme.RData")
-par(mfrow = c(1,2))
-matplot(timestamps01,Z1_est[,-c(which_columns, which_columns_large, which_columnsz22)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "Z1")
-matplot(timestamps01,Z2_est[,-c(which_columns, which_columns_large, which_columnsz22)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "Z2")
-
-par(mfrow = c(1,2))
-matplot(t,Z1_est[,-c(which_columns, which_columns_large, which_columnsz22)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "Z1")
-matplot(t,Z2_est[,-c(which_columns, which_columns_large, which_columnsz22)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "Z2")
+matplot(timestamps01,Z1_est[,-c(which_columns1, which_columns2)],type='l', lty=1, col="light grey",
+        xlab = "Time", ylab = "Value", main = "Z1", cex.lab = 1.5,cex.axis = 2,cex.main=2)
+matplot(timestamps01,Z2_est[,-c(which_columns1, which_columns2)],type='l', lty=1, col="light grey",
+        xlab = "Time", ylab = "Value", main = "Z2",cex.lab = 1.5,cex.axis = 2,cex.main=2)
 
 par(mfrow = c(1,3))
-matplot(t,p1_est[,-c(which_columns, which_columns_large, which_columnsz22)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "p1",ylim=c(0,1))
-matplot(t,p2_est[,-c(which_columns, which_columns_large, which_columnsz22)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "p2",ylim=c(0,1))
-matplot(t,p3_est[,-c(which_columns, which_columns_large, which_columnsz22)],type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "p3",ylim=c(0,1))
-
-
-
-par(mfrow = c(1,3))
-matplot(t,logit_p(p1_est[,-c(which_columns, which_columns_large, which_columnsz22)]),type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "logit p1")
-matplot(t,logit_p(p2_est[,-c(which_columns, which_columns_large, which_columnsz22)]),type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "logit p2")
-matplot(t,logit_p(p3_est[,-c(which_columns, which_columns_large, which_columnsz22)]),type='l', lty=1, col="light grey",
-        xlab = "Time", ylab = "Value", main = "logit p3")
-
-save(timestamps01, Z1_est, Z2_est,which_columns, which_columns_large, which_columnsz22, file ="twitter_est_extreme_t_final.RData")
+matplot(timestamps01,p1_est,type='l', lty=1, col="light grey",
+        xlab = "Time", ylab = "Value", main = "p1", cex.lab = 1.5,cex.axis = 2,cex.main=2)
+matplot(timestamps01,p2_est,type='l', lty=1, col="light grey",
+        xlab = "Time", ylab = "Value", main = "p2", cex.lab = 1.5,cex.axis = 2,cex.main=2)
+matplot(timestamps01,p3_est,type='l', lty=1, col="light grey",
+        xlab = "Time", ylab = "Value", main = "p3", cex.lab = 1.5,cex.axis = 2,cex.main=2)
 #################################
 #generate new Z
 extract_scores_UNIVFPCA <- function (mZ1,mZ2, tt , PVE=0.95)
 {
-  # mZ1 <- Z1_est[,-c(index_remove)]
-  # mZ2 <- Z2_est[,-c(index_remove)]
   
-  # mZ1 <- Z1_est
-  # mZ2 <- Z2_est
-  # tt <- timestamps01
-  
-  # mZ1 <- Z1_est[,-c(index_remove)][,-c(1,2718)][,-c(540,2717)][,-2715]
-  # mZ2 <- Z2_est[,-c(index_remove)][,-c(1,2718)][,-c(540,2717)][,-2715]
-  
-  # mZ1 <- Z1_est[,-c(which_columns)]
-  # mZ2 <-  Z2_est[,-c(which_columns)]
   m<- nrow(mZ1)
   n<-ncol(mZ1)
   
@@ -318,8 +251,7 @@ extract_scores_UNIVFPCA <- function (mZ1,mZ2, tt , PVE=0.95)
   return (list(scores=Scores_est, Phi= Phi_est))
 }
 #simulation
-load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/time_stamp.RData")
-timestamps01  <- t
+
 #3865, 5 score dimention
 #eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns)],Z2_est[,-c(which_columns)], timestamps01 , PVE=0.95)
 eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns, which_columns_large, which_columnsz22)],
