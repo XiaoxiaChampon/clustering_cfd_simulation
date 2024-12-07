@@ -1058,6 +1058,12 @@ GetOccurrenceFractions <- function(scenario)
 #' @param k number of points along the score decay axis
 #' @return A list that contains mu_1, mu_2, score_vals
 #'
+# setting <- 2
+# scenario <- "B"
+# k <- 2
+# t <- timestamps01
+
+#abc <- GetMuAndScore(setting, scenario, k)
 GetMuAndScore <- function(setting, scenario, k)
 {
   all_score_values = rep(0, k)
