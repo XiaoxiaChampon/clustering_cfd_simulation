@@ -154,17 +154,17 @@ option_list <- list(
 parser <- OptionParser(option_list=option_list)
 options <- parse_args(parser)
 
-# options_jobid <- options$jobid
-# options_numcpus <- options$numcpus
-# options_replicas <- options$replicas
+options_jobid <- options$jobid
+options_numcpus <- options$numcpus
+options_replicas <- options$replicas
 #options_subjects <- options$subjects
 # options_boots <- options$boots
 # options_timelength <- options$timelength
 #####################
 
-options_jobid <- 1
-options_numcpus <- 9
-options_replicas <- 2
+# options_jobid <- 1
+# options_numcpus <- 9
+# options_replicas <- 2
 # options_subjects <- 100
 # options_boots <- 100
 # options_timelength <- 90
