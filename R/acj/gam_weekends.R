@@ -25,6 +25,11 @@
 # Date: 11/06/2024
 ##############################################################
 
+
+
+
+
+
 #' Runs gam on the given data and returns results
 #' Fits a binomial to describe the given in_x
 #' @param timestamps01 current time value
@@ -79,7 +84,7 @@ RunGam_Day <- function(timestamps01, weekend_vector, in_x, family_choice, basis_
 #' @param timestamps01 current time value
 #' @param W : 2D categorical data matrix, n * t dimension, n is the number of subjects, t is the time
 #' @return list: fit values and linear predictors both with length of time_series length, Z is t*n, p: t*n
-EstimateCategFuncData_multinormial_ind <- function(timestamps01, W, basis_size=25, method="ML")
+EstimateCategFuncData_multinormial <- function(timestamps01, W, basis_size=25, method="ML")
 {
   
   # num_indv<- ncol(W)
@@ -274,8 +279,8 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
   num_indv<- nrow(W)
   timeseries_length <-ncol(W)
   category_count <- length(unique(c(W)))
-  weekend_vector <- as.factor(c(rep(c(rep(0,480),rep(1,192)),4))[1:timeseries_length])
-  
+  #weekend_vector <- as.factor(c(rep(c(rep(0,480),rep(1,192)),4))[1:timeseries_length])
+  weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))[1:timeseries_length]
   Z<-NULL
   # prob<-array(0, c(num_indv, timeseries_length , category_count))
   # weekend_vector_coef <- matrix(0, num_indv, category_count-1)

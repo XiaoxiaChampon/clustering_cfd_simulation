@@ -1,5 +1,96 @@
+
+############################################################
+# Copyright 2024 Xiaoxia Champon
+
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the “Software”), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software,
+# and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+# THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+############################################################
+# Purpose: Adding weekend effects in Twitter Simulation
+# Author:  Xiaoxia Champon
+# Date: 11/06/2024
+##############################################################
+
+#load("Twitter_figure_label_mul_weekend.RData")
+
+
+#length(vec1) #3743, 43, 28
+#length(vec2)
+#length(vec0)
+#3830, 5
+#head(tclusterdata)
+#ksi1       ksi2 weekend_vector1 V4 Cluster
+
+# vec1_score1_mean <- mean(tclusterdata[vec1,1])
+# vec1_score2_mean <- mean(tclusterdata[vec1,2])
+# 
+# vec1_score1_sd <- sd(tclusterdata[vec1,1])
+# vec1_score2_sd <- sd(tclusterdata[vec1,2])
+# 
+# vec1_weekend1_mean <- mean(tclusterdata[vec1,3])
+# vec1_weekend2_mean <- mean(tclusterdata[vec1,4])
+# 
+# vec1_weekend1_sd <- sd(tclusterdata[vec1,3])
+# vec1_weekend2_sd <- sd(tclusterdata[vec1,4])
+# ####################################
+# vec2_score1_mean <- mean(tclusterdata[vec2,1])
+# vec2_score2_mean <- mean(tclusterdata[vec2,2])
+# 
+# vec2_score1_sd <- sd(tclusterdata[vec2,1])
+# vec2_score2_sd <- sd(tclusterdata[vec2,2])
+# 
+# vec2_weekend1_mean <- mean(tclusterdata[vec2,3])
+# vec2_weekend2_mean <- mean(tclusterdata[vec2,4])
+# 
+# vec2_weekend1_sd <- sd(tclusterdata[vec2,3])
+# vec2_weekend2_sd <- sd(tclusterdata[vec2,4])
+# ####################################
+# vec0_score1_mean <- mean(tclusterdata[vec0,1])
+# vec0_score2_mean <- mean(tclusterdata[vec0,2])
+# 
+# vec0_score1_sd <- sd(tclusterdata[vec0,1])
+# vec0_score2_sd <- sd(tclusterdata[vec0,2])
+# 
+# vec0_weekend1_mean <- mean(tclusterdata[vec0,3])
+# vec0_weekend2_mean <- mean(tclusterdata[vec0,4])
+# 
+# vec0_weekend1_sd <- sd(tclusterdata[vec0,3])
+# vec0_weekend2_sd <- sd(tclusterdata[vec0,4])
+# ##################################
+# eigenf_func <- eigen_score$Phi 
+# weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))
+# 
+# save(vec1_score1_mean, vec1_score2_mean, vec1_score1_sd, vec1_score2_sd,
+#      vec1_weekend1_mean, vec1_weekend2_mean, vec1_weekend1_sd, vec1_weekend2_sd,
+#      vec2_score1_mean, vec2_score2_mean, vec2_score1_sd, vec2_score2_sd,
+#      vec2_weekend1_mean, vec2_weekend2_mean, vec2_weekend1_sd, vec2_weekend2_sd,
+#      vec0_score1_mean, vec0_score2_mean, vec0_score1_sd, vec0_score2_sd,
+#      vec0_weekend1_mean, vec0_weekend2_mean, vec0_weekend1_sd, vec0_weekend2_sd,
+#      eigenf_func,   file = "Twiiter_Sim_Input.RData" )
+#load("Twitter_eigen_weekend.RData")
+#Z_after <-  t(sqrt(length(timestamps01))*eigen_score $scores%*%ginv(eigen_score$Phi))
+###########################################
+load("Twiiter_Sim_Input.RData")
+source("hazel_function.R")
+############################################
+
 # For: profiling and visualization of profiling
-library(profvis)
+#library(profvis)
 
 # For: gam 
 library(mgcv)
@@ -11,23 +102,68 @@ library(pracma)
 library(refund)
 
 # For: FADPclust
-library(FADPclust)
+#library(FADPclust)
 
 # For: kNNdist
 library(dbscan)
 
 # For: elbow
-devtools::install_github("ahasverus/elbow")
-library(elbow)
+#devtools::install_github("ahasverus/elbow")
+#library(elbow)
 
 # For: rand.index
 library(fossil)
 
 # For: cfda method
-library(cfda)
+#library(cfda)
 
 # For: gather method
 library(tidyverse)
+
+###########
+library(optparse)
+
+# Define options
+option_list <- list(
+  make_option(c("-j", "--jobid"), type="integer", default=123,
+              help="Job Index", metavar="JOBID"),
+  make_option(c("-n", "--numcpus"), type="integer", default=32,
+              help="Num CPUs", metavar="NUMCPUS"),
+  make_option(c("-r", "--replicas"), type="integer", default=100,
+              help="Num Replicas", metavar="NUMREPLICAS")
+  # make_option(c("-s", "--subjects"), type="integer", default=100,
+  #             help="Num Subjects/Individuals", metavar="NUMSUBJECTS"),
+  # make_option(c("-b", "--boots"), type="integer", default=100,
+  #             help="Num Bootstraps", metavar="NUMBOOTS"),
+  # make_option(c("-l", "--timelength"), type="integer", default=90,
+  #             help="Time Length", metavar="TIMELENGTH")
+)
+
+#####need for hazel
+# Create parser and parse options
+parser <- OptionParser(option_list=option_list)
+options <- parse_args(parser)
+
+# options_jobid <- options$jobid
+# options_numcpus <- options$numcpus
+# options_replicas <- options$replicas
+#options_subjects <- options$subjects
+# options_boots <- options$boots
+# options_timelength <- options$timelength
+#####################
+
+options_jobid <- 1
+options_numcpus <- 9
+options_replicas <- 2
+# options_subjects <- 100
+# options_boots <- 100
+# options_timelength <- 90
+# Use the options
+cat("Job Idx:", options_jobid, "\n")
+cat("Num CPUs:", options_numcpus, "\n")
+cat("Num Replicas:", options_replicas, "\n")
+#cat("Num Subjects:", options_subjects, "\n")
+
 
 # ---- For: parallelization ----
 # For: foreach loop
@@ -49,7 +185,8 @@ if(run_parallel)
   {
     parallel::stopCluster(cl = my.cluster)
   }
-  n.cores <- parallel::detectCores() - 1
+  #n.cores <- parallel::detectCores() - 1
+  n.cores <- options_numcpus
   my.cluster <- parallel::makeCluster(n.cores, type = "PSOCK")
   doParallel::registerDoParallel(cl = my.cluster)
   cat("Parellel Registered: ", foreach::getDoParRegistered(), "\n")
@@ -62,11 +199,13 @@ if(run_parallel)
 if (!dir.exists("outputs")){
   dir.create("outputs")
 }
-if (!dir.exists("outputs/clustertwitter")){
-  dir.create("outputs/clustertwitter")
+if (!dir.exists("outputs/clustersims")){
+  dir.create("outputs/clustersims")
 }
 
 # profvis({
+
+
 
 
 #**** evaluate cluster accuracy using RI and ARI
@@ -209,7 +348,7 @@ mse_bw_matrix <- function(truecurve,estcurve,timestamps01)
   # mseall=c(0)
   ######could probably use apply function here it's also subject level
   mseall <- foreach(i = 1:n, .combine = c, .packages = c("pracma")) %dorng% {
-    source("R/acj/trapzfnum_function.R")
+    source("trapzfnum_function.R")
     return(rbind(trapzfnum(truecurve[,i], estcurve[,i],timestamps01)))
   }
   
@@ -231,7 +370,7 @@ mse_bw_matrixp <- function(truecurve,estcurve,timestamps01)
   
   sqrt_2 <- sqrt(2)
   mseall <- foreach(i = 1:n, .combine = c, .packages = c("pracma")) %dorng% {
-    source("R/acj/trapzfnum_function.R")
+    source("trapzfnum_function.R")
     return(rbind(trapzfnump(truecurve[,i], estcurve[,i],timestamps01)/sqrt_2))
   }
   
@@ -271,10 +410,362 @@ cfda_score_function <- function(cfda_data, nCores,timestamps01,basis_num ){
 }
 
 
+#' Function to produce functional dummy variables X from categorical functional data W
+#' @param W 2D array, t*n: t is the timestamp and n is the number of the observation
+#' @return X 3D array, n*t*Q, Q: the total number of the category
+GetXFromW <- function(W)
+{
+  num_indv <- ncol(W)
+  timeseries_length <-nrow(W)
+  category_count<- length(unique(c(W)))
+  Q_vals <- unique(c(W))
+  if(is.numeric(Q_vals)) Q_vals<- sort(Q_vals)
+  
+  X<- array(0, c(num_indv,timeseries_length,category_count))
+  for(indv in 1:num_indv)
+  {
+    for(timestamps01 in 1:timeseries_length)
+    {
+      X[indv, timestamps01, which(Q_vals==W[, indv][timestamps01])] <- 1
+    }
+  }
+  return(X)
+}
 
+#' Function to select 
+#' @param choice "probit", "binomial",  or "multinormial"
+#' @param timestamps01, 1D array, time interval that cfd is observed
+#' @param  W: 2D array, t*n, t: the number of time points, n: the number of individuals
+#' @param  basis_size=25, the number of basis function used 
+#' @param  method="ML"
+#' @return list of 2D array: True Z curves , Est Z curves, True p curves, Est p curves
+#'                           all have dimension t*n
+EstimateCategFuncData <- function(choice, timestamps01, W, basis_size=25, method="ML")
+{
+  if(choice == "probit"){
+    X <- GetXFromW(W)
+    return(EstimateCategFuncData_probit(timestamps01, X, basis_size, method, 1/150))
+  }else if(choice == "binomial"){
+    X <- GetXFromW(W)
+    return(EstimateCategFuncData_binorm(timestamps01, X, basis_size, method))
+  }else if(choice == "multinomial"){
+    #return(EstimateCategFuncData_multinormial(timestamps01, W, basis_size, method))
+    return(EstimateCategFuncData_multinormial_weekend_parallel(timestamps01, W, basis_size, method))
+  }
+}
+
+#' Fit multinomial from W categorical data to extra smooth latent curves
+#' Fits a binomial to describe the given in_x
+#' @param timestamps01 current time value
+#' @param W : 2D categorical data matrix, t * n dimension, n is the number of subjects, t is the time
+#' @return list: fit values and linear predictors both with length of time_series length, Z is t*n, p: t*n
+
+EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W, basis_size=25, method="ML")
+{
+  
+  
+  num_indv<- ncol(W)
+  timeseries_length <-  nrow(W)
+  category_count <- length(unique(c(W)))
+  #weekend_vector <- as.factor(c(rep(c(rep(0,480),rep(1,192)),4))[1:timeseries_length])
+  weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))[1:timeseries_length]
+  Z<-NULL
+  # prob<-array(0, c(num_indv, timeseries_length , category_count))
+  # weekend_vector_coef <- matrix(0, num_indv, category_count-1)
+  #for (i in 1:num_indv){
+  
+  
+  Z_P_WeekendCoef <- foreach(i = 1:num_indv , .packages = c("mgcv")) %dorng%
+    
+    #T_rep <- foreach(this_row = 1:5) %dorng%
+    { #source("./source_code/R/data_generator.R")
+      
+      Z_P_WeekendCoef <- numeric(timeseries_length*(category_count+category_count-1)+category_count-1)
+      print(i)
+      if ( length(table(W[,i])) == category_count) {
+        
+        fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector,
+                            ~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector
+        ),
+        family=multinom(K=category_count-1), method = method,
+        control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+        optimizer=c("outer","bfgs")) 
+        #####
+        #print("Dino")
+        ####to find design matrix
+        g_design <- predict(fit_binom,type = "lpmatrix")
+        g_mul <- g_design[,c(1,category_count:basis_size)]
+        coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size)]
+        #extract z
+        z1 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+        #####
+        g_mul_2 <- g_design[,c(1,category_count:basis_size)+basis_size]
+        coef_fit_2 <- fit_binom$coefficients[c(1,category_count:basis_size)+basis_size]
+        z2 <- g_mul_2 %*% as.matrix(coef_fit_2,ncol=1)
+        
+        weekend_vector_coef <- fit_binom$coefficients[c(category_count-1,basis_size+category_count-1)]
+      } else {
+        if (names(table(W[,i]))[2]=="3"){
+          W[,i][W[,i]==3] <- 2
+          basis_size_rev <- max(min(round(min(unname(table(W[,i])[2]), sum(1-unname(table(W[,i])[2])))/2), basis_size ), 5)
+          fit_binom <- gam(W[,i]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+                           family = "binomial", method = method,
+                           control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+                           optimizer=c("outer","bfgs"))
+          # print("GODAK ADERI")
+          ######################
+          ####to find design matrix
+          g_design <- predict(fit_binom,type = "lpmatrix")
+          g_mul <- g_design[,c(1,category_count:basis_size_rev)]
+          coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size_rev)]
+          #extract z
+          z2 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+          #####
+          z1 <- rep(0,timeseries_length)
+          
+          weekend_vector_coef <- c(0, fit_binom$coefficients[category_count-1])
+          ##########################
+        }else {
+          basis_size_rev <- max(min(round(min(unname(table(W[,i])[2]), sum(1-unname(table(W[,i])[2])))/2), basis_size ), 5)
+          fit_binom <- gam(W[,i]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+                           family = "binomial", method = method,
+                           control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+                           optimizer=c("outer","bfgs"))
+          #print("MATA OYA NATHWA PALUI")
+          ######################
+          ####to find design matrix
+          g_design <- predict(fit_binom,type = "lpmatrix")
+          g_mul <- g_design[,c(1,category_count:basis_size_rev)]
+          coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size_rev)]
+          #extract z
+          z1 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+          z2 <- rep(0,timeseries_length)
+          weekend_vector_coef <- c(fit_binom$coefficients[category_count-1],0)
+          ##########################
+        }
+      } 
+      #2t*n matrix
+      Z<- cbind(Z, c(z1,z2))
+      ##find probability
+      Z_cbind=cbind(z1,z2)
+      exp_z=exp(Z_cbind)
+      denominator_p=1+exp_z[,1]+exp_z[,2]
+      p1 <- exp_z[,1]/denominator_p
+      p2 <- exp_z[,2]/denominator_p
+      p3=1/denominator_p
+      #3D matrix t*n*category 
+      #prob[i,,] <- cbind(p1, p2, p3)
+      # 5*t +2 length
+      Z_P_WeekendCoef <- c(z1,z2,p1,p2,p3, weekend_vector_coef)
+      
+      return(Z_P_WeekendCoef)
+      
+    }
+  
+  Z_P_WeekendCoef <- do.call(rbind, Z_P_WeekendCoef)
+  #t*n
+  return(list(Z1_est=t(Z_P_WeekendCoef[,1:timeseries_length]), 
+              Z2_est=t(Z_P_WeekendCoef[,(1+timeseries_length):(2*timeseries_length)]),
+              p1_est=t(Z_P_WeekendCoef[,(1+timeseries_length*2):(3*timeseries_length)]), 
+              p2_est=t(Z_P_WeekendCoef[,(1+timeseries_length*3):(4*timeseries_length)]), 
+              p3_est=t(Z_P_WeekendCoef[,(1+timeseries_length*4):(5*timeseries_length)]) ,
+              weekend_vector_coef = Z_P_WeekendCoef[,(1+timeseries_length*(category_count+category_count-1)):dim(Z_P_WeekendCoef)[2]]))
+}
+
+
+GenerateCategFuncData <- function(prob_curves)
+{
+  curve_count <- length(prob_curves);
+  
+  # we could have just passed these arguments ???
+  num_indvs <- ncol(prob_curves$p1)
+  timeseries_length <- nrow(prob_curves$p1)
+  
+  # better names for W and X ???
+  W <- matrix(0, ncol=num_indvs, nrow=timeseries_length)
+  X_array <- array(0, c(num_indvs, timeseries_length, curve_count))
+  
+  for(indv in c(1:num_indvs))
+  {
+    X <- sapply(c(1:timeseries_length),
+                function(this_time) rmultinom(n=1,
+                                              size=1,
+                                              prob = c(prob_curves$p1[this_time,indv],
+                                                       prob_curves$p2[this_time,indv],
+                                                       prob_curves$p3[this_time,indv]) ))
+    W[,indv] <- apply(X, 2, which.max)
+    X_array[indv,,] <- t(X)
+  }
+  
+  return(list(X=X_array, W=W)) # X_binary W_catfd
+}
+
+#' Get clustered data
+#'
+#'
+#k=2
+#setting = 1
+GenerateClusterData <- function(setting, scenario, k, num_indvs, timeseries_length, weekend_vector, eigenf_func)
+{
+  setting_object <- GetMuAndScore(setting, scenario, k, num_indvs, weekend_vector)
+  cluster_f <- GenerateClusterDataScenario(num_indvs,
+                                           timeseries_length,
+                                           k,
+                                           mu_1 = setting_object$mu_1,
+                                           mu_2 = setting_object$mu_2,
+                                           score_vals = setting_object$score_vals,
+                                           weekend_columns = setting_object$weekend_columns,
+                                           eigenf_func = eigenf_func)
+  return (cluster_f )
+}
+
+#' Get fraction of occurrence of each class for a given scenario
+#' @param scenario scenario name as a string "A", "B", "C"
+#' @return a vector containing the fractions
+#'
+GetOccurrenceFractions <- function(scenario)
+{
+  occur_fraction <- switch (scenario,
+                            "A" = c(0.75, 0.22, 0.03),
+                            "B" = c(0.5, 0.3, 0.2),
+                            "C" = c(0.1, 0.6, 0.3)
+  )
+  
+  return (occur_fraction)
+}
+
+#' Get mu_1, mu_2 functions, and score_vals objects for a given context.
+#' @param setting setting identified as an integer 1,2,3
+#' @param scenario scenario name as a string "A", "B", "C"
+#' @param k number of points along the score decay axis
+#' @return A list that contains mu_1, mu_2, score_vals
+#'
+#'
+# cluster_allocation <- c(10,20,30)
+# abc <- GetMuAndScore (1,"B" , 2)
+# setting <- 1
+# scenario <- "B"
+# k=2
+GetMuAndScore <- function(setting, scenario, k,  num_indvs, weekend_vector)
+{
+  all_score_values = rep(0, k)
+  
+  if(1 == setting)
+  { 
+    weekend_1 <- rnorm(num_indvs, vec1_weekend1_mean, vec1_weekend1_sd)
+    mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
+    weekend_2 <- rnorm(num_indvs, vec1_weekend2_mean, vec1_weekend2_sd)
+    mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
+    
+    score_front <- c(vec1_score1_mean, vec1_score1_sd,vec1_score2_mean, vec1_score2_sd)
+  } else if(2 == setting)
+  {
+    weekend_1 <- rnorm(num_indvs, vec2_weekend1_mean, vec2_weekend1_sd)
+    mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
+    weekend_2 <- rnorm(num_indvs, vec2_weekend2_mean, vec2_weekend2_sd)
+    mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
+    
+    score_front <- c(vec2_score1_mean, vec2_score1_sd,vec2_score2_mean, vec2_score2_sd)
+  } else if(3 == setting)
+  {
+    weekend_1 <- rnorm(num_indvs, vec0_weekend1_mean, vec0_weekend1_sd)
+    mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
+    weekend_2 <- rnorm(num_indvs, vec0_weekend2_mean, vec0_weekend2_sd)
+    mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
+    
+    score_front <- c(vec0_score1_mean, vec0_score1_sd,vec0_score2_mean, vec0_score2_sd)
+  }
+  
+  for(idx in 1:length(score_front))
+  {
+    all_score_values[idx] <- score_front[idx]
+  }
+  
+  weekend_columns <- cbind(weekend_1, weekend_2)
+  return(list("mu_1" = mu_1, "mu_2" = mu_2, "score_vals" = all_score_values,
+              "weekend_columns" = weekend_columns))
+}
+
+
+#' Generate cluster data for a given scenario
+#' @param num_indvs number of individuals
+#' @param timeseries_length length of time-series as an integer
+#' @param k  number of eigen(psi) functions
+#' @param mu_1 mean function for the first latent curve
+#' @param mu_2 mean function for the second latent curve
+#' @param score_vals the variance of the principal component scores
+#'
+GenerateClusterDataScenario <- function(num_indvs,
+                                        timeseries_length,
+                                        k = 2,
+                                        mu_1,
+                                        mu_2,
+                                        score_vals,
+                                        weekend_columns,
+                                        eigenf_func)
+{
+  #timestamps01 <- seq(from = 0.0001, to = 1, length=timeseries_length)
+  
+  # noise octaves
+  # cat("octave", num_indvs, k, num_indvs * k, "\n")
+  scores_standard <- matrix(rnorm(num_indvs * k), ncol = k)
+  scores <- scores_standard %*% diag(sqrt(score_vals[c(2,4)]))
+  scores <- sweep(scores, 2, score_vals[c(1,3)], "+")
+  #
+  BIG_mu <- rbind(mu_1, mu_2)
+  #BIG_phi <- PsiFunc(k, timestamps01)
+  BIG_phi <- eigenf_func
+  
+  
+  
+  Z <- BIG_phi %*% t(scores) + BIG_mu
+  Z1 <- Z[1:timeseries_length, ]
+  Z2 <- Z[1:timeseries_length + timeseries_length, ]
+  
+  ###add 1.9,1.5
+  Z1 <- Z1 + (max(Z1)-min(Z1))*1.85
+  Z2 <- Z2 + (max(Z2)-min(Z2))*1.65
+  
+  
+  expZ1 <- exp(Z1)
+  expZ2 <- exp(Z2)
+  denom <- 1 + expZ1 + expZ2
+  p1 <- expZ1 / denom
+  p2 <- expZ2 / denom
+  p3 <- 1 / denom
+  
+  # vectorize for future work!!!
+  return(list(Z1 = Z1, Z2 = Z2,
+              p1 = p1, p2 = p2, p3 = p3,
+              MEAN = BIG_mu, PHI = BIG_phi, MFPC = scores , weekend_columns = weekend_columns))
+}
+
+#' Psi function
+#'
+PsiFunc <- function(klen, timestamps01)
+{
+  psi_k1 <- sapply(c(1:klen), function(i) sin((2 * i + 1) * pi * timestamps01))
+  psi_k2 <- sapply(c(1:klen), function(i) cos(2 * i * pi * timestamps01))
+  return(rbind(psi_k1, psi_k2))
+}
+
+
+#cluster_number <- c (3743, 43, 16, 28)
+#proportion_cluster <- cluster_number/sum(cluster_number)
+#0.977284595 0.011227154 0.004177546 0.007310705
+
+# num_indvs = 100
+# timeseries_length = 672
+# scenario = "B"
+# num_replicas = 1
+# est_choice = "multinomial"
+# run_hellinger = TRUE
+# some_identifier = "test"
+# temp_folder = temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
 
 ClusterSimulation <- function(num_indvs, timeseries_length,
-                              scenario, num_replicas, est_choice, run_hellinger, temp_folder)
+                              scenario, num_replicas, est_choice, run_hellinger, temp_folder,
+                              eigenf_func_input = eigenf_func)
 {
   cat("Cluster Simulation\nNum Indvs:\t", num_indvs,
       "\nTimeseries Len:\t", timeseries_length,
@@ -292,6 +783,25 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
   
   true_cluster_db <- rep(c(1,2,0), cluster_allocation)
   cat("\nTrue Cluster DB:\n", true_cluster_db)
+  
+  timestamps01 <- seq(0.001,0.99,length=(dim(eigenf_func_input)[1]/2))
+ 
+  weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))[1:timeseries_length]
+  timestamps01_new <- timestamps01
+  timeseries_length_new <- length(timestamps01_new)
+  timestamps01 <- seq(0.001,0.99,length=timeseries_length)
+  eigenf_func_new <- eigenf_func_input
+  eigenf_func_sim <- matrix(0,nrow = 2*timeseries_length, ncol=2)
+  eigenf_func_sim[1:timeseries_length,1] <- cubicspline(timestamps01_new, eigenf_func_new[1:timeseries_length_new,1],timestamps01 )
+  eigenf_func_sim[1:timeseries_length,2] <- cubicspline(timestamps01_new, eigenf_func_new[1:timeseries_length_new,2],timestamps01 )
+  eigenf_func_sim[(1+timeseries_length):(timeseries_length*2),1] <- cubicspline(timestamps01_new, 
+                                                                            eigenf_func_new[(1+timeseries_length_new):(timeseries_length_new*2),1],
+                                                                           timestamps01 )
+  eigenf_func_sim[(1+timeseries_length):(timeseries_length*2),2] <- cubicspline(timestamps01_new, 
+                                                                            eigenf_func_new[(1+timeseries_length_new):(timeseries_length_new*2),2],
+                                                                           timestamps01 )
+  
+  eigenf_func <- eigenf_func_sim
   
   rmse<- array(0, c(num_replicas, 2, 3))       #2 components and 3 settings
   hellinger <- array(0, c(num_replicas, 3, 3)) #3 events probab and 3 settings
@@ -339,9 +849,16 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     # cat("\nCluster", replica_idx, " --> seed: ", seed_cluster + 100 * replica_idx, "\n")
     cat("Cluster", replica_idx, "\n")
     
-    cluster_f1 <- GenerateClusterData(1, scenario, 3, cluster_allocation[1], timeseries_length)
-    cluster_f2 <- GenerateClusterData(2, scenario, 3, cluster_allocation[2], timeseries_length)
-    cluster_f3 <- GenerateClusterData(3, scenario, 3, cluster_allocation[3], timeseries_length)
+    # cluster_f1 <- GenerateClusterData(1, scenario, 3, cluster_allocation[1], timeseries_length)
+    # cluster_f2 <- GenerateClusterData(2, scenario, 3, cluster_allocation[2], timeseries_length)
+    # cluster_f3 <- GenerateClusterData(3, scenario, 3, cluster_allocation[3], timeseries_length)
+    
+    cluster_f1 <- GenerateClusterData(1, scenario, 2, cluster_allocation[1], timeseries_length, weekend_vector,eigenf_func)
+    cluster_f2 <- GenerateClusterData(2, scenario, 2, cluster_allocation[2], timeseries_length,  weekend_vector, eigenf_func)
+    cluster_f3 <- GenerateClusterData(3, scenario, 2, cluster_allocation[3], timeseries_length,  weekend_vector, eigenf_func)
+    weekend_columns <- rbind(cluster_f1$weekend_columns,
+                             cluster_f2$weekend_columns,
+                             cluster_f3$weekend_columns)
     
     # Recover the latent Gaussian process --> is this always 2 ???
     Z1 <- cbind(cluster_f1$Z1, cluster_f2$Z1, cluster_f3$Z1)
@@ -402,15 +919,18 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
       refcat <- catorder[numcat]
       count_iter <- 0
       while (count_iter < 100 && 
-             ( (numcat < length(Q_vals))
-               ||(timeseries_length==300  && min(as.numeric(tolcat)) < 4)
-               ||(timeseries_length==750  && min(as.numeric(tolcat)) < 10)
+             ( 
+               (length(tolcat) == 1)
+               || (("1" %in% names(table(categ_func_data_list$W[,indv])) == FALSE)==TRUE)
              )
       )
       {
         count_iter <- count_iter + 1
         
-        new_cluster_data <- GenerateClusterData(setting_choice, scenario, 3, 5, timeseries_length)
+        #new_cluster_data <- GenerateClusterData(setting_choice, scenario, 3, 5, timeseries_length)
+        new_cluster_data <- GenerateClusterData(setting_choice, scenario, 2, 5, timeseries_length,  weekend_vector, eigenf_func)
+        weekend_columns[indv,] <-  new_cluster_data$weekend_columns[3,]
+        
         
         new_prob_curves <- list(p1 = new_cluster_data$p1, p2 = new_cluster_data$p2, p3 = new_cluster_data$p3)
         new_categ_func_data_list <- GenerateCategFuncData( new_prob_curves )
@@ -432,13 +952,19 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
         refcat <- catorder[numcat]
       } # end while
       total_regens <- total_regens + count_iter
+      cat("Indivdual", indv, "with regeneration",total_regens, "\n")
+      
     } # end for(indv in 1:num_indvs)
     
     #Estimation
     cat("EstimateCategFuncData", replica_idx, "\n")
-    timestamps01 <- seq(from = 0.0001, to = 1, length=timeseries_length)
+    #timestamps01 <- seq(from = 0.001, to = 0.99, length=timeseries_length)
+    cat("length of time series", length(timestamps01), "\n")
+    cat("Estimate Start with W shape", dim(categ_func_data_list$W), "\n")
     timeKeeperStart("Xiaoxia")
     categFD_est <- EstimateCategFuncData(est_choice, timestamps01, categ_func_data_list$W)
+    cat("Estimation finish", dim(categ_func_data_list$W), "\n")
+    
     #####################9/11/2023
     Z_est_curve[[replica_idx]]=array(c(categFD_est$Z1_est,categFD_est$Z2_est),dim=c(timeseries_length,num_indvs,2))
     p_est_curve[[replica_idx]]=array(c(categFD_est$p1_est,categFD_est$p2_est,categFD_est$p3_est),dim=c(timeseries_length,num_indvs,3))
@@ -473,6 +999,8 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     mfpca_est <- extract_scores_UNIVFPCA(mZ1=categFD_est$Z1_est, mZ2=categFD_est$Z2_est, tt=timestamps01, PVE=0.95)
     timeKeeperNext()
     
+    mfpca_true$scores <- cbind(mfpca_true$scores, weekend_columns)
+    mfpca_est$scores <-  cbind(mfpca_est$scores, categFD_est$weekend_vector_coef)
     #KMEANS
     true_kmeans_temp <- kmeans_cluster(data=mfpca_true$scores)$label
     timeKeeperStart("kmeans")
@@ -485,9 +1013,13 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     est_fadp_temp <- fadp_cluster(mZ1=categFD_est$Z1_est, mZ2=categFD_est$Z2_est, tt=timestamps01)$label
     timeKeeperNext()
     #dbscan
-    true_dbscan_temp <- dbscan_cluster(data=mfpca_true$scores,1)$label
+    # true_dbscan_temp <- dbscan_cluster(data=mfpca_true$scores,1)$label
+    # timeKeeperStart("dbscan")
+    # est_dbscan_temp <- dbscan_cluster(data=mfpca_est$scores,1)$label
+    
+    true_dbscan_temp <- dbscan_cluster(data=mfpca_true$scores,4)$label
     timeKeeperStart("dbscan")
-    est_dbscan_temp <- dbscan_cluster(data=mfpca_est$scores,1)$label
+    est_dbscan_temp <- dbscan_cluster(data=mfpca_est$scores,4)$label
     timeKeeperNext()
     ##dbscan cfda
     ##########no cfda
@@ -500,7 +1032,8 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     my.cluster <- parallel::makeCluster(n.cores, type = "PSOCK")
     doParallel::registerDoParallel(cl = my.cluster)
     cat("Parellel Registered: ", foreach::getDoParRegistered(), "\n")
-    est_dbscan_temp_cfda <- dbscan_cluster(data=cfd_scores,1)$label
+    #est_dbscan_temp_cfda <- dbscan_cluster(data=cfd_scores,1)$label
+    est_dbscan_temp_cfda <- dbscan_cluster(data=cfd_scores,4)$label
     ##########no cfda
     timeKeeperNext()
     #record results
@@ -687,485 +1220,8 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
   return(return_vals)
 }
 
-#' Function to produce functional dummy variables X from categorical functional data W
-#' @param W 2D array, t*n: t is the timestamp and n is the number of the observation
-#' @return X 3D array, n*t*Q, Q: the total number of the category
-GetXFromW <- function(W)
-{
-  num_indv <- ncol(W)
-  timeseries_length <-nrow(W)
-  category_count<- length(unique(c(W)))
-  Q_vals <- unique(c(W))
-  if(is.numeric(Q_vals)) Q_vals<- sort(Q_vals)
-  
-  X<- array(0, c(num_indv,timeseries_length,category_count))
-  for(indv in 1:num_indv)
-  {
-    for(timestamps01 in 1:timeseries_length)
-    {
-      X[indv, timestamps01, which(Q_vals==W[, indv][timestamps01])] <- 1
-    }
-  }
-  return(X)
-}
 
-#' Function to select 
-#' @param choice "probit", "binomial",  or "multinormial"
-#' @param timestamps01, 1D array, time interval that cfd is observed
-#' @param  W: 2D array, t*n, t: the number of time points, n: the number of individuals
-#' @param  basis_size=25, the number of basis function used 
-#' @param  method="ML"
-#' @return list of 2D array: True Z curves , Est Z curves, True p curves, Est p curves
-#'                           all have dimension t*n
-EstimateCategFuncData <- function(choice, timestamps01, W, basis_size=25, method="ML")
-{
-  if(choice == "probit"){
-    X <- GetXFromW(W)
-    return(EstimateCategFuncData_probit(timestamps01, X, basis_size, method, 1/150))
-  }else if(choice == "binomial"){
-    X <- GetXFromW(W)
-    return(EstimateCategFuncData_binorm(timestamps01, X, basis_size, method))
-  }else if(choice == "multinomial"){
-    return(EstimateCategFuncData_multinormial(timestamps01, W, basis_size, method))
-  }
-}
-
-#'Function to estimate z and p using wood_multinormial
-#' @param timestamps01, 1D array, time interval that cfd is observed
-#' @param  W: 2D array, t*n, t: the number of time points, n: the number of individuals
-#' @param  basis_size=25, the number of basis function used 
-#' @param  method="ML"
-#' @return list of 2D array: True Z curves , Est Z curves, True p curves, Est p curves
-#'                           all have dimension t*n
-
-EstimateCategFuncData_multinormial <- function(timestamps01, W, basis_size=25, method="ML")
-{
-  
-  num_indv<- ncol(W)
-  timeseries_length <-nrow(W)
-  weekend_vector <- c(rep(c(rep(0,480),rep(1,192)),4))[1:timeseries_length]
-  Z<-NULL
-  prob<-array(0, c(num_indv, timeseries_length , 3))
-  for (i in 1:num_indv){
-    # i=1
-    # W <- answer_for_graph$W_cfd[[1]]
-    fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cc", m=2, k = basis_size),
-                        ~s(timestamps01,bs = "cc", m=2, k = basis_size)
-                        # ,
-                        # weekend_vector
-                        ),
-                   family=multinom(K=2), method = method,
-                   control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
-                   optimizer=c("outer","bfgs")) 
-    
-    z1<- fit_binom$linear.predictors[,1]
-    z2<- fit_binom$linear.predictors[,2]
-    Z<- cbind(Z, c(z1,z2))
-    ##find probability
-    Z_cbind=cbind(z1,z2)
-    exp_z=exp(Z_cbind)
-    denominator_p=1+exp_z[,1]+exp_z[,2]
-    p1 <- exp_z[,1]/denominator_p
-    p2 <- exp_z[,2]/denominator_p
-    p3=1/denominator_p
-    prob[i,,] <- cbind(p1, p2, p3)
-    
-  }
-  
-  return(list(Z1_est=Z[1:timeseries_length ,], Z2_est=Z[1:timeseries_length +timeseries_length ,], 
-              p1_est=t(prob[,,1]), p2_est=t(prob[,,2]), p3_est=t(prob[,,3]) ))
-}
-
-
-#'Function to estimate z and p using probit
-#' @param timestamps01, 1D array, time interval that cfd is observed
-#' @param  X: 3D array, t*n*Q, t: the number of time points, n: the number of individuals, Q: the number of categories
-#' @param  basis_size=25, the number of basis function used 
-#' @param  method="ML"
-#' @return list of 2D array: True Z curves , Est Z curves, True p curves, Est p curves
-#'                           all have dimension t*n
-EstimateCategFuncData_probit <- function(timestamps01, X, basis_size=25, method="ML", threshold_probability=0.004)
-{
-  num_indv<- dim(X)[1]
-  timeseries_length<- dim(X)[2]
-  category_count <- dim(X)[3]
-  
-  Z<-NULL
-  p<-array(0, c(num_indv, timeseries_length, category_count))
-  # for (indv in 1:num_indv){
-  #   #i=93
-  #   #basis_size=25
-  #   x1<- X[indv,,1]
-  #   x2<- X[indv,,2]
-  #   x3<- X[indv,,3]
-  # 
-  #   if (timeseries_length<=301 && sum(x1)/timeseries_length<threshold_probability){
-  # 
-  #     gam_result_1 <- RunGam_Day(timestamps01, x1, "probit", basis_size, method)
-  #     p1 <- gam_result_1$prob
-  #     p1_linpred <- gam_result_1$linpred
-  # 
-  #     gam_result_2 <- RunGam_Day(timestamps01, x2, "probit", basis_size, method)
-  #     p2 <- gam_result_2$prob
-  #     p2_linpred <- gam_result_2$linpred
-  # 
-  #     gam_result_3 <- RunGam_Day(timestamps01, x3, "probit", basis_size, method)
-  #     p3 <- gam_result_3$prob
-  #     p3_linpred <- gam_result_3$linpred
-  #     denominator_p <- 1+exp(p3_linpred)
-  #     z1<- (p1_linpred-p3_linpred)-log( (1+exp(p1_linpred))/(denominator_p))
-  #     z2<- (p2_linpred-p3_linpred)-log( (1+exp(p2_linpred))/(denominator_p))
-  #   }else{
-  #     gam_result_1 <- RunGam_Day(timestamps01, x1, "binomial", basis_size, method)
-  #     p1 <- gam_result_1$prob
-  #     p1_linpred <- gam_result_1$linpred
-  # 
-  #     gam_result_2 <- RunGam_Day(timestamps01, x2, "binomial", basis_size, method)
-  #     p2 <- gam_result_2$prob
-  #     p2_linpred <- gam_result_2$linpred
-  # 
-  #     gam_result_3 <- RunGam_Day(timestamps01, x3, "binomial", basis_size, method)
-  #     p3 <- gam_result_3$prob
-  #     p3_linpred <- gam_result_3$linpred
-  # 
-  #     # estimate the latent curves Z
-  #     exp_p3_linepred <- exp(p3_linpred)
-  #     z1 <- (p1_linpred-p3_linpred)-log( (1+exp(p1_linpred))/(1+exp_p3_linepred))
-  #     z2 <- (p2_linpred-p3_linpred)-log( (1+exp(p2_linpred))/(1+exp_p3_linepred))
-  # 
-  # 
-  #   } # end if special case for probit
-  # 
-  #   Z <- cbind(Z, c(z1,z2))
-  #   psum <- (p1+p2+p3)
-  #   p[indv,,] <- cbind(p1/psum, p2/psum, p3/psum)
-  # }
-  # return(list(Z1_est=Z[1:timeseries_length,],
-  #             Z2_est=Z[1:timeseries_length+timeseries_length,],
-  #             p1_est=t(p[,,1]),
-  #             p2_est=t(p[,,2]),
-  #             p3_est=t(p[,,3]) ))
-  
-  zp <- foreach (indv = 1:num_indv, .combine = cbind, .init = NULL, .packages = c("mgcv")) %dorng%
-    {
-      source("R/acj/gam_weekends.R")
-      
-      x1<- X[indv,,1]
-      x2<- X[indv,,2]
-      x3<- X[indv,,3]
-      
-      weekend_vector <- c(rep(c(rep(0,480),rep(1,192)),4))[1:length(x1)]
-      
-      probit_binom <- function(x_binary){
-        if (sum(x_binary)/timeseries_length < threshold_probability){
-          gam_result_binary <- RunGam_Day(timestamps01,weekend_vector, x_binary, "probit", basis_size, method)
-          p_binary <- gam_result_binary$prob
-          p_binary_linpred <- gam_result_binary$linpred
-        }else{
-          gam_result_binary <- RunGam_Day(timestamps01, weekend_vector, x_binary, "binomial", basis_size, method)
-          p_binary <- gam_result_binary$prob
-          p_binary_linpred <- gam_result_binary$linpred
-        }
-        return(list("p_binary"=p_binary,"p_binary_linpred"=p_binary_linpred))
-      }
-      
-      r_1 <- probit_binom(x1)
-      p1 <- r_1$p_binary
-      p1_linpred <- r_1$p_binary_linpred
-      
-      r_2 <- probit_binom(x2)
-      p2 <- r_2$p_binary
-      p2_linpred <- r_2$p_binary_linpred
-      
-      r_3 <- probit_binom(x3)
-      p3 <- r_3$p_binary
-      p3_linpred <- r_3$p_binary_linpred
-      
-      # estimate the latent curves Z
-      denominator_p <- 1 + exp(p3_linpred)
-      z1 <- (p1_linpred-p3_linpred)-log( (1+exp(p1_linpred))/(denominator_p))
-      z2 <- (p2_linpred-p3_linpred)-log( (1+exp(p2_linpred))/(denominator_p))
-      
-      psum <- p1 + p2 + p3
-      return(c(c(z1,z2), cbind(p1/psum, p2/psum, p3/psum)))
-    }
-  # Unravel the two variables from zp
-  z_rows_count <- timeseries_length * 2
-  Z <- array(zp[1:z_rows_count, ], c(z_rows_count, num_indv))
-  p <- array(t(matrix(zp[(z_rows_count + 1):dim(zp)[1], ], ncol=num_indv)), c(num_indv, timeseries_length, category_count))
-  
-  
-  return(list(Z1_est=Z[1:timeseries_length,],
-              Z2_est=Z[1:timeseries_length+timeseries_length,],
-              p1_est=t(p[,,1]),
-              p2_est=t(p[,,2]),
-              p3_est=t(p[,,3]) ))
-}
-
-#'Function to estimate z and p using binom
-#' @param timestamps01, 1D array, time interval that cfd is observed
-#' @param  X: 3D array, t*n*Q, t: the number of time points, n: the number of individuals, Q: the number of categories
-#' @param  basis_size=25, the number of basis function used 
-#' @param  method="ML"
-#' @return list of 2D array: True Z curves , Est Z curves, True p curves, Est p curves
-#'                           all have dimension t*n
-
-EstimateCategFuncData_binorm <- function(timestamps01,  X, basis_size=25, method="ML")
-{
-  num_indv<- dim(X)[1]
-  timeseries_length<- dim(X)[2]
-  category_count <- dim(X)[3]
-  
-  Z<-NULL
-  p<-array(0, c(num_indv, timeseries_length, category_count))
-  ##########################
-  ###########################
-  # num_indv is the subject and this step is done by subject level
-  # can parallel
-  #############################
-  #############################
-  #   for (indv in 1:num_indv)
-  #   {
-  #     x1<- X[indv,,1]
-  #     x2<- X[indv,,2]
-  #     x3<- X[indv,,3]
-  #
-  #     # fit the Binom model
-  #     ###################################################
-  #     ###################################################
-  #     ##updated estimation
-  #
-  #     gam_result_1 <- RunGam_Day(timestamps01, x1, "binomial", basis_size, method)
-  #     p1 <- gam_result_1$prob
-  #     p1_linpred <- gam_result_1$linpred
-  #
-  #     gam_result_2 <- RunGam_Day(timestamps01, x2, "binomial", basis_size, method)
-  #     p2 <- gam_result_2$prob
-  #     p2_linpred <- gam_result_2$linpred
-  #
-  #     gam_result_3 <- RunGam_Day(timestamps01, x3, "binomial", basis_size, method)
-  #     p3 <- gam_result_3$prob
-  #     p3_linpred <- gam_result_3$linpred
-  #
-  #     # estimate the latent tranjecotries Z
-  #     exp_p3_linepred <- exp(p3_linpred)
-  #     z1 <- (p1_linpred-p3_linpred)-log( (1+exp(p1_linpred))/(1+exp_p3_linepred))
-  #     z2 <- (p2_linpred-p3_linpred)-log( (1+exp(p2_linpred))/(1+exp_p3_linepred))
-  #
-  #     Z <- cbind(Z, c(z1,z2))
-  #     psum <- (p1+p2+p3)
-  #     p[indv,,] <- cbind(p1/psum, p2/psum, p3/psum)
-  #   }
-  # return(p)
-  # return(list(Z=Z,p=p))
-  
-  
-  zp <- foreach (indv = 1:num_indv, .combine = cbind, .init = NULL, .packages = c("mgcv")) %dorng%
-    {
-      source("R/acj/gam_weekends.R")
-      
-      x1<- X[indv,,1]
-      x2<- X[indv,,2]
-      x3<- X[indv,,3]
-      #15 minutes, one day 24 hours is 96 data points, 5 days is 480 data points, two weekends days are 192 data points
-      # one week is 480+192 = 672 data points
-      #two week is 1344 data points
-      # three week is 2016 data points
-      #four week is 2688 data points
-      #maximum 2000 data points is 286 weeks
-      weekend_vector <- c(rep(c(rep(0,480),rep(1,192)),4))[1:length(x1)]
-      gam_result_1 <- RunGam_Day(timestamps01,  weekend_vector, x1, "binomial", basis_size, method)
-      p1 <- gam_result_1$prob
-      p1_linpred <- gam_result_1$linpred
-      
-      gam_result_2 <- RunGam_Day(timestamps01,  weekend_vector, x2, "binomial", basis_size, method)
-      p2 <- gam_result_2$prob
-      p2_linpred <- gam_result_2$linpred
-      
-      gam_result_3 <- RunGam_Day(timestamps01,  weekend_vector, x3, "binomial", basis_size, method)
-      p3 <- gam_result_3$prob
-      p3_linpred <- gam_result_3$linpred
-      
-      # estimate the latent tranjecotries Z
-      denominator_p <- 1 + exp(p3_linpred)
-      z1 <- (p1_linpred-p3_linpred)-log( (1+exp(p1_linpred))/(denominator_p))
-      z2 <- (p2_linpred-p3_linpred)-log( (1+exp(p2_linpred))/(denominator_p))
-      
-      psum <- p1 + p2 + p3
-      return(c(c(z1,z2), cbind(p1/psum, p2/psum, p3/psum)))
-    }
-  # Unravel the two variables from zp
-  z_rows_count <- timeseries_length * 2
-  Z <- array(zp[1:z_rows_count, ], c(z_rows_count, num_indv))
-  p <- array(t(matrix(zp[(z_rows_count + 1):dim(zp)[1], ], ncol=num_indv)), c(num_indv, timeseries_length, category_count))
-  
-  return(list(Z1_est=Z[1:timeseries_length,],
-              Z2_est=Z[1:timeseries_length+timeseries_length,],
-              p1_est=t(p[,,1]),
-              p2_est=t(p[,,2]),
-              p3_est=t(p[,,3]) ))
-}
-
-
-
-GenerateCategFuncData <- function(prob_curves)
-{
-  curve_count <- length(prob_curves);
-  
-  # we could have just passed these arguments ???
-  num_indvs <- ncol(prob_curves$p1)
-  timeseries_length <- nrow(prob_curves$p1)
-  
-  # better names for W and X ???
-  W <- matrix(0, ncol=num_indvs, nrow=timeseries_length)
-  X_array <- array(0, c(num_indvs, timeseries_length, curve_count))
-  
-  for(indv in c(1:num_indvs))
-  {
-    X <- sapply(c(1:timeseries_length),
-                function(this_time) rmultinom(n=1,
-                                              size=1,
-                                              prob = c(prob_curves$p1[this_time,indv],
-                                                       prob_curves$p2[this_time,indv],
-                                                       prob_curves$p3[this_time,indv]) ))
-    W[,indv] <- apply(X, 2, which.max)
-    X_array[indv,,] <- t(X)
-  }
-  
-  return(list(X=X_array, W=W)) # X_binary W_catfd
-}
-
-#' Get clustered data
-#'
-#'
-GenerateClusterData <- function(setting, scenario, k, num_indvs, timeseries_length)
-{
-  setting_object <- GetMuAndScore(setting, scenario, k)
-  cluster_f <- GenerateClusterDataScenario(num_indvs,
-                                           timeseries_length,
-                                           k,
-                                           mu_1 = setting_object$mu_1,
-                                           mu_2 = setting_object$mu_2,
-                                           score_vals = setting_object$score_vals)
-  return (cluster_f)
-}
-
-#' Get fraction of occurrence of each class for a given scenario
-#' @param scenario scenario name as a string "A", "B", "C"
-#' @return a vector containing the fractions
-#'
-GetOccurrenceFractions <- function(scenario)
-{
-  occur_fraction <- switch (scenario,
-                            "A" = c(0.75, 0.22, 0.03),
-                            "B" = c(0.5, 0.3, 0.2),
-                            "C" = c(0.1, 0.6, 0.3)
-  )
-  
-  return (occur_fraction)
-}
-
-#' Get mu_1, mu_2 functions, and score_vals objects for a given context.
-#' @param setting setting identified as an integer 1,2,3
-#' @param scenario scenario name as a string "A", "B", "C"
-#' @param k number of points along the score decay axis
-#' @return A list that contains mu_1, mu_2, score_vals
-#'
-GetMuAndScore <- function(setting, scenario, k)
-{
-  all_score_values = rep(0, k)
-  
-  if(1 == setting)
-  {
-    mu_1 <- function(t) -1 + 2 * t + 2 * t^2
-    
-    mu_2 <- switch(scenario,
-                   "A" = function(t) -2.5 + exp(t * 2),
-                   "B" = function(t) -0.5 + exp(t * 2),
-                   "C" = function(t) -2.5 + exp(t * 2)
-    )
-    score_front <- switch(scenario,
-                          "A" = c(1, 1/2, 1/4),
-                          "B" = c(1, 1/2, 1/4),
-                          "C" = c(50, 25, 5)
-    )
-  } else if(2 == setting)
-  {
-    mu_1 <- function(t) 4 * t^2 - 1.2
-    
-    mu_2 <- function(t) 4 * t^2 - 3.5
-    
-    score_front <- c(1, 1/2, 1/4)
-  } else if(3 == setting)
-  {
-    mu_1 <- function(t) -2.2 + 4 * t^2
-    
-    mu_2 <- function(t) -7 + 6 * t^2
-    
-    score_front <- c(1, 1/4, 1/16)
-  }
-  
-  for(idx in 1:length(score_front))
-  {
-    all_score_values[idx] <- score_front[idx]
-  }
-  
-  return(list("mu_1" = mu_1, "mu_2" = mu_2, "score_vals" = all_score_values))
-}
-
-
-#' Generate cluster data for a given scenario
-#' @param num_indvs number of individuals
-#' @param timeseries_length length of time-series as an integer
-#' @param k  number of eigen(psi) functions
-#' @param mu_1 mean function for the first latent curve
-#' @param mu_2 mean function for the second latent curve
-#' @param score_vals the variance of the principal component scores
-#'
-GenerateClusterDataScenario <- function(num_indvs,
-                                        timeseries_length,
-                                        k = 3,
-                                        mu_1,
-                                        mu_2,
-                                        score_vals)
-{
-  timestamps01 <- seq(from = 0.0001, to = 1, length=timeseries_length)
-  
-  # noise octaves
-  # cat("octave", num_indvs, k, num_indvs * k, "\n")
-  scores_standard <- matrix(rnorm(num_indvs * k), ncol = k)
-  scores <- scores_standard %*% diag(sqrt(score_vals))
-  
-  #
-  BIG_mu <- c(mu_1(timestamps01), mu_2(timestamps01))
-  BIG_phi <- PsiFunc(k, timestamps01)
-  
-  Z <- BIG_phi %*% t(scores) + BIG_mu
-  Z1 <- Z[1:timeseries_length, ]
-  Z2 <- Z[1:timeseries_length + timeseries_length, ]
-  expZ1 <- exp(Z1)
-  expZ2 <- exp(Z2)
-  denom <- 1 + expZ1 + expZ2
-  p1 <- expZ1 / denom
-  p2 <- expZ2 / denom
-  p3 <- 1 / denom
-  
-  # vectorize for future work!!!
-  return(list(Z1 = Z1, Z2 = Z2,
-              p1 = p1, p2 = p2, p3 = p3,
-              MEAN = BIG_mu, PHI = BIG_phi, MFPC = scores))
-}
-
-#' Psi function
-#'
-PsiFunc <- function(klen, timestamps01)
-{
-  psi_k1 <- sapply(c(1:klen), function(i) sin((2 * i + 1) * pi * timestamps01))
-  psi_k2 <- sapply(c(1:klen), function(i) cos(2 * i * pi * timestamps01))
-  return(rbind(psi_k1, psi_k2))
-}
-
-RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="noid")
+RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="noid", eigenf_func_input = eigenf_func)
 {
   temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
   # Empty the directory if it exists
@@ -1176,34 +1232,20 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
   print(temp_folder)
   
   
-  # n100t300C <- ClusterSimulation(100,300,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # n100t750C <- ClusterSimulation(100,750,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # n100t2000C <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # 
-  # 
-  # n500t300C <- ClusterSimulation(500,300,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # n500t750C <- ClusterSimulation(500,750,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # n500t2000C <- ClusterSimulation(500,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # 
-  # 
-  # n1000t300C <- ClusterSimulation(1000,300,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # n1000t750C <- ClusterSimulation(1000,750,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  # n1000t2000C <- ClusterSimulation(1000,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+  n100t300C <- ClusterSimulation(100,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n100t750C <- ClusterSimulation(100,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n100t2000C <- ClusterSimulation(100,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
   
-  n100t300C <- ClusterSimulation(100,672,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  n100t750C <- ClusterSimulation(100,1344,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  n100t2000C <- ClusterSimulation(100,2016,scenario,num_replicas,est_choice,TRUE,temp_folder)
+  n500t300C <- ClusterSimulation(500,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n500t750C <- ClusterSimulation(500,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n500t2000C <- ClusterSimulation(500,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
   
-  n500t300C <- ClusterSimulation(500,672,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  n500t750C <- ClusterSimulation(500,1344,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  n500t2000C <- ClusterSimulation(500,2016,scenario,num_replicas,est_choice,TRUE,temp_folder)
+  n1000t300C <- ClusterSimulation(1000,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n1000t750C <- ClusterSimulation(1000,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n1000t2000C <- ClusterSimulation(1000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
-  
-  n1000t300C <- ClusterSimulation(1000,672,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  n1000t750C <- ClusterSimulation(1000,1344,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  n1000t2000C <- ClusterSimulation(1000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder)
   
   true_tableC <- rbind(n100t300C$cluster_table_true,n100t750C$cluster_table_true,n100t2000C$cluster_table_true,
                        n500t300C$cluster_table_true,n500t750C$cluster_table_true,n500t2000C$cluster_table_true,
@@ -1375,10 +1417,11 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # set.seed(123)
 # A_2_multinomial <- RunExperiment("A",2,"multinomial","test")
 
-#RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="noid")
-
 set.seed(123)
-A_100_binomial <- RunExperiment("A",2,"binomial","paper1")
+B_2_multinomial <- RunExperiment("B", options_replicas,"multinomial","paper1")
+save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, scenario,num_replicas,"Hazel_mul_B2.RData",sep="_")))
+
+#save(B_2_multinomial, file = "Hazel_mul_B2.RData")
 
 #save(C_2_probit,file="C_2_probit.RData")
 # set.seed(123)
