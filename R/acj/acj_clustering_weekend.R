@@ -87,10 +87,20 @@
 ###########################################
 load("Twiiter_Sim_Input.RData")
 source("hazel_function.R")
+source("time_track_function.R")
 ############################################
 
 # For: profiling and visualization of profiling
 #library(profvis)
+
+#for eval.fd
+library(fda)
+
+#for semimetric.basis
+library(fda.usc)
+
+#for cluster.stats
+library(fpc)
 
 # For: gam 
 library(mgcv)
@@ -259,7 +269,7 @@ dbscan_cluster <- function(data=scores_K, scale_eps){
   ipoint <- elbow(data = distdataelbow)
   epsoptimal=(ipoint$sort.dist._selected)*scale_eps
   
-  out_dbscan <- dbscan(data, eps =epsoptimal , minPts = minPts)
+  out_dbscan <- dbscan::dbscan(data, eps =epsoptimal , minPts = minPts)
   return(list(nclust=dim(table(out_dbscan$cluster)), label = out_dbscan$cluster))
 }
 
@@ -642,47 +652,54 @@ GetOccurrenceFractions <- function(scenario)
 #'
 #'
 # cluster_allocation <- c(10,20,30)
-# abc <- GetMuAndScore (1,"B" , 2)
-# setting <- 1
+ # abc2 <- GetMuAndScore (2,"B" , 2, 30, weekend_vector)
+ # abc1 <- GetMuAndScore (1,"B" , 2, 50, weekend_vector)
+ # abc3 <- GetMuAndScore (3,"B" , 2, 20, weekend_vector)
+ # abc1$score_vals
+ # abc2$score_vals
+ # abc3$score_vals
+# setting <- 2
 # scenario <- "B"
 # k=2
+# weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))[1:timeseries_length]
 GetMuAndScore <- function(setting, scenario, k,  num_indvs, weekend_vector)
 {
-  all_score_values = rep(0, k)
+
+  #all_score_values = rep(0, 4)
   
   if(1 == setting)
   { 
-    weekend_1 <- rnorm(num_indvs, vec1_weekend1_mean, vec1_weekend1_sd)
+    weekend_1 <- rnorm(num_indvs, vec1_weekend1_mean*0.1, vec1_weekend1_sd*0.1)
     mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
-    weekend_2 <- rnorm(num_indvs, vec1_weekend2_mean, vec1_weekend2_sd)
+    weekend_2 <- rnorm(num_indvs, vec1_weekend2_mean, vec1_weekend2_sd*0.1)
     mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
     
-    score_front <- c(vec1_score1_mean, vec1_score1_sd,vec1_score2_mean, vec1_score2_sd)
+    score_front <- c(vec1_score1_mean*0.1, vec1_score1_sd*0.1,vec1_score2_mean, vec1_score2_sd*0.1)
   } else if(2 == setting)
   {
-    weekend_1 <- rnorm(num_indvs, vec2_weekend1_mean, vec2_weekend1_sd)
+    weekend_1 <- rnorm(num_indvs, vec2_weekend1_mean*0.025, vec2_weekend1_sd*0.05)
     mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
-    weekend_2 <- rnorm(num_indvs, vec2_weekend2_mean, vec2_weekend2_sd)
+    weekend_2 <- rnorm(num_indvs, vec2_weekend2_mean*0.1, vec2_weekend2_sd)
     mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
     
-    score_front <- c(vec2_score1_mean, vec2_score1_sd,vec2_score2_mean, vec2_score2_sd)
+    score_front <- c(vec2_score1_mean*0.025, vec2_score1_sd*0.05,vec2_score2_mean*0.1, vec2_score2_sd)
   } else if(3 == setting)
   {
-    weekend_1 <- rnorm(num_indvs, vec0_weekend1_mean, vec0_weekend1_sd)
+    weekend_1 <- rnorm(num_indvs, vec0_weekend1_mean*0.015, vec0_weekend1_sd*0.025)
     mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
-    weekend_2 <- rnorm(num_indvs, vec0_weekend2_mean, vec0_weekend2_sd)
+    weekend_2 <- rnorm(num_indvs, vec0_weekend2_mean*0.05, vec0_weekend2_sd*0.025)
     mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
     
-    score_front <- c(vec0_score1_mean, vec0_score1_sd,vec0_score2_mean, vec0_score2_sd)
+    score_front <- c(vec0_score1_mean*0.015, vec0_score1_sd*0.025,vec0_score2_mean*0.05, vec0_score2_sd*0.025)
   }
   
-  for(idx in 1:length(score_front))
-  {
-    all_score_values[idx] <- score_front[idx]
-  }
-  
+  # for(idx in 1:length(score_front))
+  # {
+  #   all_score_values[idx] <- score_front[idx]
+  # }
+  # 
   weekend_columns <- cbind(weekend_1, weekend_2)
-  return(list("mu_1" = mu_1, "mu_2" = mu_2, "score_vals" = all_score_values,
+  return(list("mu_1" = mu_1, "mu_2" = mu_2, "score_vals" = score_front,
               "weekend_columns" = weekend_columns))
 }
 
@@ -716,15 +733,16 @@ GenerateClusterDataScenario <- function(num_indvs,
   #BIG_phi <- PsiFunc(k, timestamps01)
   BIG_phi <- eigenf_func
   
-  
-  
-  Z <- BIG_phi %*% t(scores) + BIG_mu
+  #Z_after <-  t(sqrt(length(timestamps01))*eigen_score $scores%*%ginv(eigen_score$Phi))
+
+  Z <- t(sqrt(timeseries_length)*scores%*%ginv(eigenf_func) )+ BIG_mu
+  #Z <- BIG_phi %*% t(scores) + BIG_mu
   Z1 <- Z[1:timeseries_length, ]
   Z2 <- Z[1:timeseries_length + timeseries_length, ]
   
   ###add 1.9,1.5
-  Z1 <- Z1 + (max(Z1)-min(Z1))*1.85
-  Z2 <- Z2 + (max(Z2)-min(Z2))*1.65
+  # Z1 <- Z1 + (max(Z1)-min(Z1))*1.85
+  # Z2 <- Z2 + (max(Z2)-min(Z2))*1.65
   
   
   expZ1 <- exp(Z1)
@@ -1419,9 +1437,10 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 
 set.seed(123)
 B_2_multinomial <- RunExperiment("B", options_replicas,"multinomial","paper1")
-save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, scenario,num_replicas,"Hazel_mul_B2.RData",sep="_")))
+save(B_2_multinomial, file = "Hazel_mul_B2.RData")
+save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, options_replicas,"Hazel_mul_B2.RData",sep="_")))
 
-#save(B_2_multinomial, file = "Hazel_mul_B2.RData")
+
 
 #save(C_2_probit,file="C_2_probit.RData")
 # set.seed(123)
@@ -1450,5 +1469,16 @@ if(run_parallel)
   initialized_parallel <- FALSE
 }
 
-
-
+#n=100 t=672
+# Xiaoxia calc time taken: Time difference of 14.96065 secs 
+# count_iter:  1 
+# count_iter:  2 
+# count_iter:  3 
+# count_iter:  4 
+# count_iter:  5 
+# univfpca calc time taken: Time difference of 0.01541018 secs 
+# kmeans calc time taken: Time difference of 0.01435995 secs 
+# fadp calc time taken: Time difference of 0.5094869 secs 
+# dbscan calc time taken: Time difference of 0.001412153 secs 
+# Parellel Registered:  TRUE 
+# cfd calc time taken: Time difference of 3.078088 mins 
