@@ -89,10 +89,10 @@ load("Twiiter_Sim_Input.RData")
 source("hazel_function.R")
 source("time_track_function.R")
 ############################################
-
 # For: profiling and visualization of profiling
-#library(profvis)
-
+# library(profvis)
+# profiling_result <- profvis({
+#   
 #for eval.fd
 library(fda)
 
@@ -154,17 +154,20 @@ option_list <- list(
 parser <- OptionParser(option_list=option_list)
 options <- parse_args(parser)
 
-options_jobid <- options$jobid
-options_numcpus <- options$numcpus
-options_replicas <- options$replicas
+# options_jobid <- options$jobid
+# options_numcpus <- options$numcpus
+# options_replicas <- options$replicas
 #options_subjects <- options$subjects
 # options_boots <- options$boots
 # options_timelength <- options$timelength
 #####################
-
+# 
 # options_jobid <- 1
 # options_numcpus <- 9
-# options_replicas <- 2
+# options_replicas <- 1
+
+
+
 # options_subjects <- 100
 # options_boots <- 100
 # options_timelength <- 90
@@ -514,7 +517,11 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
         z2 <- g_mul_2 %*% as.matrix(coef_fit_2,ncol=1)
         
         weekend_vector_coef <- fit_binom$coefficients[c(category_count-1,basis_size+category_count-1)]
-      } else {
+        pp <- predict(fit_binom,type="response")
+        p1 <- pp[,1]
+        p2 <- pp[,2]
+        p3 <- pp[,3]
+        } else {
         if (names(table(W[,i]))[2]=="3"){
           W[,i][W[,i]==3] <- 2
           basis_size_rev <- max(min(round(min(unname(table(W[,i])[2]), sum(1-unname(table(W[,i])[2])))/2), basis_size ), 5)
@@ -535,6 +542,10 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
           
           weekend_vector_coef <- c(0, fit_binom$coefficients[category_count-1])
           ##########################
+          p3 <- predict(fit_binom,type="response")
+          p1 <- 1-p3
+          p2 <- rep(0,timeseries_length)
+          
         }else {
           basis_size_rev <- max(min(round(min(unname(table(W[,i])[2]), sum(1-unname(table(W[,i])[2])))/2), basis_size ), 5)
           fit_binom <- gam(W[,i]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
@@ -552,17 +563,20 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
           z2 <- rep(0,timeseries_length)
           weekend_vector_coef <- c(fit_binom$coefficients[category_count-1],0)
           ##########################
+          p2 <- predict(fit_binom,type="response")
+          p1 <- 1-p2
+          p3 <- rep(0,timeseries_length)
         }
       } 
       #2t*n matrix
-      Z<- cbind(Z, c(z1,z2))
-      ##find probability
-      Z_cbind=cbind(z1,z2)
-      exp_z=exp(Z_cbind)
-      denominator_p=1+exp_z[,1]+exp_z[,2]
-      p1 <- exp_z[,1]/denominator_p
-      p2 <- exp_z[,2]/denominator_p
-      p3=1/denominator_p
+      # Z<- cbind(Z, c(z1,z2))
+      # ##find probability
+      # Z_cbind=cbind(z1,z2)
+      # exp_z=exp(Z_cbind)
+      # denominator_p=1+exp_z[,1]+exp_z[,2]
+      # p1 <- exp_z[,1]/denominator_p
+      # p2 <- exp_z[,2]/denominator_p
+      # p3=1/denominator_p
       #3D matrix t*n*category 
       #prob[i,,] <- cbind(p1, p2, p3)
       # 5*t +2 length
@@ -772,8 +786,37 @@ PsiFunc <- function(klen, timestamps01)
 #proportion_cluster <- cluster_number/sum(cluster_number)
 #0.977284595 0.011227154 0.004177546 0.007310705
 
+
 # num_indvs = 100
-# timeseries_length = 672
+# timeseries_length = 504
+
+# num_indvs = 100
+# timeseries_length = 1008
+
+# num_indvs = 100
+#timeseries_length = 1512
+# timeseries_length = 2016
+
+# num_indvs = 500
+# timeseries_length = 504
+
+# num_indvs = 500
+# timeseries_length = 1008
+
+# num_indvs = 500
+# timeseries_length = 1512
+# timeseries_length = 2016
+
+# num_indvs = 1000
+# timeseries_length = 504
+
+# num_indvs = 1000
+# timeseries_length = 1008
+
+# num_indvs = 1000
+#timeseries_length = 1512
+# timeseries_length = 2016
+
 # scenario = "B"
 # num_replicas = 1
 # est_choice = "multinomial"
@@ -989,6 +1032,8 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     W_cfd[[replica_idx]]=categ_func_data_list$W
     #####################9/11/2023
     timeKeeperNext()
+    #save(categFD_est, file = "ZPW_500_672.RData" )
+    #load("ZPW_500_672.RData")
     
     if (run_hellinger)
     {
@@ -1005,6 +1050,10 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
       hellinger[replica_idx, ,] <-  rbind( c(by(error.p1, true_cluster, mean)),
                                            c(by(error.p2, true_cluster, mean)),
                                            c(by(error.p3, true_cluster, mean)))
+      # [,1]      [,2]      [,3]
+      # [1,] 0.2435779 0.1695561 0.1365889
+      # [2,] 0.4602496 0.3658547 0.2503850
+      # [3,] 0.2711508 0.2180779 0.2187912
       
     }
     
@@ -1250,19 +1299,35 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
   print(temp_folder)
   
   
-  n100t300C <- ClusterSimulation(100,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n100t750C <- ClusterSimulation(100,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n100t2000C <- ClusterSimulation(100,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n100t300C <- ClusterSimulation(100,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n100t750C <- ClusterSimulation(100,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n100t2000C <- ClusterSimulation(100,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # 
+  # 
+  # n500t300C <- ClusterSimulation(500,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n500t750C <- ClusterSimulation(500,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n500t2000C <- ClusterSimulation(500,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # 
+  # 
+  # n1000t300C <- ClusterSimulation(1000,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n1000t750C <- ClusterSimulation(1000,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n1000t2000C <- ClusterSimulation(1000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # 
+  
+  n100t300C <- ClusterSimulation(100,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n100t750C <- ClusterSimulation(100,1008,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n100t2000C <- ClusterSimulation(100,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
   
-  n500t300C <- ClusterSimulation(500,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n500t750C <- ClusterSimulation(500,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n500t2000C <- ClusterSimulation(500,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n500t300C <- ClusterSimulation(500,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n500t750C <- ClusterSimulation(500,1008,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n500t2000C <- ClusterSimulation(500,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
   
-  n1000t300C <- ClusterSimulation(1000,672,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n1000t750C <- ClusterSimulation(1000,1344,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n1000t2000C <- ClusterSimulation(1000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n1000t300C <- ClusterSimulation(1000,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n1000t750C <- ClusterSimulation(1000,1008,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  n1000t2000C <- ClusterSimulation(1000,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  
   
   
   true_tableC <- rbind(n100t300C$cluster_table_true,n100t750C$cluster_table_true,n100t2000C$cluster_table_true,
@@ -1416,51 +1481,29 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # }) # profvis end
 
 
-#test
-# set.seed(123)
-#  A_2_probit <- RunExperiment("A",2,"probit")
-#  
-# 
-#  
-#  set.seed(123)
-#  A_2_mul <- RunExperiment("A",2,"multinormial")
-# 
 
 # set.seed(123)
 # A_2_probit <- RunExperiment("A",2,"probit","test")
 # 
 # set.seed(123)
 # A_2_binomial <- RunExperiment("A",2,"binomial","test")
-# 
-# set.seed(123)
-# A_2_multinomial <- RunExperiment("A",2,"multinomial","test")
+
 
 set.seed(123)
 B_2_multinomial <- RunExperiment("B", options_replicas,"multinomial","paper1")
 save(B_2_multinomial, file = "Hazel_mul_B2.RData")
 save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, options_replicas,"Hazel_mul_B2.RData",sep="_")))
 
+#})
 
+#htmlwidgets::saveWidget(profiling_result, "profiling_result.html")
 
 #save(C_2_probit,file="C_2_probit.RData")
 # set.seed(123)
 # A_100_probit <- RunExperiment("A",100,"probit")
 # 
 # 
-# set.seed(123)
-# A_20_multinomial <- RunExperiment("A",20,"multinormial")
-# 
-# set.seed(123)
-# C_20_probit <- RunExperiment("C",20,"probit")
-# 
-# set.seed(123)
-# C_20_multinomial <- RunExperiment("C",20,"multinormial")
-# 
-# set.seed(123)
-# B_20_probit <- RunExperiment("B",20,"probit")
-# 
-# set.seed(123)
-# B_20_multinormial <- RunExperiment("B",20,"multinormial")
+
 
 
 if(run_parallel)
