@@ -162,9 +162,9 @@ options <- parse_args(parser)
 # options_timelength <- options$timelength
 #####################
 # 
-# options_jobid <- 1
-# options_numcpus <- 9
-# options_replicas <- 1
+options_jobid <- 1
+options_numcpus <- 9
+options_replicas <- 1
 
 
 
@@ -487,14 +487,17 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
   # weekend_vector_coef <- matrix(0, num_indv, category_count-1)
   #for (i in 1:num_indv){
   
-  
-  Z_P_WeekendCoef <- foreach(i = 1:num_indv , .packages = c("mgcv")) %dorng%
+  Z_P_WeekendCoef <- NULL
+  for (i in 1:num_indv) {
+    
+  # Z_P_WeekendCoef <- foreach(i = 1:num_indv , .packages = c("mgcv")) %dorng%
     
     #T_rep <- foreach(this_row = 1:5) %dorng%
-    { #source("./source_code/R/data_generator.R")
-      
-      Z_P_WeekendCoef <- numeric(timeseries_length*(category_count+category_count-1)+category_count-1)
+    # { #source("./source_code/R/data_generator.R")
+    
       print(i)
+    try_result <- tryCatch({
+      return_val <- numeric(timeseries_length*(category_count+category_count-1)+category_count-1)
       if ( length(table(W[,i])) == category_count) {
         
         fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector,
@@ -504,7 +507,6 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
         control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
         optimizer=c("outer","bfgs")) 
         #####
-        #print("Dino")
         ####to find design matrix
         g_design <- predict(fit_binom,type = "lpmatrix")
         g_mul <- g_design[,c(1,category_count:basis_size)]
@@ -529,7 +531,6 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
                            family = "binomial", method = method,
                            control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
                            optimizer=c("outer","bfgs"))
-          # print("GODAK ADERI")
           ######################
           ####to find design matrix
           g_design <- predict(fit_binom,type = "lpmatrix")
@@ -552,7 +553,6 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
                            family = "binomial", method = method,
                            control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
                            optimizer=c("outer","bfgs"))
-          #print("MATA OYA NATHWA PALUI")
           ######################
           ####to find design matrix
           g_design <- predict(fit_binom,type = "lpmatrix")
@@ -566,8 +566,9 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
           p2 <- predict(fit_binom,type="response")
           p1 <- 1-p2
           p3 <- rep(0,timeseries_length)
-        }
-      } 
+        } # sub if else
+      } # big if else
+      
       #2t*n matrix
       # Z<- cbind(Z, c(z1,z2))
       # ##find probability
@@ -580,12 +581,23 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
       #3D matrix t*n*category 
       #prob[i,,] <- cbind(p1, p2, p3)
       # 5*t +2 length
-      Z_P_WeekendCoef <- c(z1,z2,p1,p2,p3, weekend_vector_coef)
+      return_val <- c(z1,z2,p1,p2,p3, weekend_vector_coef)
+      print("Good")
+      ret <- list(i, TRUE, return_val)
+      ret
+    },
+    error = function(e){
+      print(paste("Error in iteration",i, ":", e$message))
+      ret <- list(i, FALSE, NULL)
+      ret
+    })
       
-      return(Z_P_WeekendCoef)
+      # return(return_val)
+      Z_P_WeekendCoef[[i]] <- try_result
       
-    }
-  
+    } # end of for loop
+  browser()
+  bad_indexes <- which(lapply(Z_P_WeekendCoef, function(x) x[[2]] == FALSE))
   Z_P_WeekendCoef <- do.call(rbind, Z_P_WeekendCoef)
   #t*n
   return(list(Z1_est=t(Z_P_WeekendCoef[,1:timeseries_length]), 
@@ -593,7 +605,8 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
               p1_est=t(Z_P_WeekendCoef[,(1+timeseries_length*2):(3*timeseries_length)]), 
               p2_est=t(Z_P_WeekendCoef[,(1+timeseries_length*3):(4*timeseries_length)]), 
               p3_est=t(Z_P_WeekendCoef[,(1+timeseries_length*4):(5*timeseries_length)]) ,
-              weekend_vector_coef = Z_P_WeekendCoef[,(1+timeseries_length*(category_count+category_count-1)):dim(Z_P_WeekendCoef)[2]]))
+              weekend_vector_coef = Z_P_WeekendCoef[,(1+timeseries_length*(category_count+category_count-1)):dim(Z_P_WeekendCoef)[2]],
+              bad_indexes=bad_indexes))
 }
 
 
@@ -824,6 +837,57 @@ PsiFunc <- function(klen, timestamps01)
 # some_identifier = "test"
 # temp_folder = temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
 
+RegenIndv <- function(indv, out_categ_func_data_list, out_weekend_columns,
+                      out_Z1, out_Z2,
+                      setting_choice, scenario, timeseries_length, 
+                      weekend_vector, eigenf_func, Q_vals){
+  
+  tolcat <- table(out_categ_func_data_list$W[,indv])
+  catorder <- order(tolcat, decreasing = TRUE)
+  numcat <- length(catorder)
+  refcat <- catorder[numcat]
+  count_iter <- 0
+  while (count_iter < 100 && 
+         ( 
+           (length(tolcat) == 1)
+           || (("1" %in% names(table(out_categ_func_data_list$W[,indv])) == FALSE)==TRUE)
+         )
+  )
+  {
+    count_iter <- count_iter + 1
+    
+    #new_cluster_data <- GenerateClusterData(setting_choice, scenario, 3, 5, timeseries_length)
+    new_cluster_data <- GenerateClusterData(setting_choice, scenario, 2, 5, timeseries_length,  weekend_vector, eigenf_func)
+    out_weekend_columns[indv,] <-  new_cluster_data$weekend_columns[3,]
+    
+    
+    new_prob_curves <- list(p1 = new_cluster_data$p1, p2 = new_cluster_data$p2, p3 = new_cluster_data$p3)
+    new_categ_func_data_list <- GenerateCategFuncData( new_prob_curves )
+    
+    # what is this 3 ?? arbitrarily chosen?
+    out_categ_func_data_list$W[, indv] <- new_categ_func_data_list$W[, 3]
+    out_Z1[, indv] <- new_cluster_data$Z1[, 3] # latent curves Z1 and Z2
+    out_categ_func_data_list$X[indv, , ] <- 0
+    out_Z2[, indv] <- new_cluster_data$Z2[, 3]
+    
+    for (this_time in 1:timeseries_length)
+    {
+      out_categ_func_data_list$X[indv, this_time, which(Q_vals == out_categ_func_data_list$W[, indv][this_time])] <- 1
+    }
+    
+    tolcat <- table(out_categ_func_data_list$W[, indv])
+    catorder <- order(tolcat, decreasing = TRUE)
+    numcat <- length(catorder)
+    refcat <- catorder[numcat]
+  } # end while
+  total_regens <- total_regens + count_iter
+  cat("Indivdual", indv, "with regeneration",total_regens, "\n")
+  
+  return_values <- list(categ_func_data_list=out_categ_func_data_list, 
+                        weekend_columns=out_weekend_columns,
+                        Z1=out_Z1, Z2=out_Z2)
+}
+
 ClusterSimulation <- function(num_indvs, timeseries_length,
                               scenario, num_replicas, est_choice, run_hellinger, temp_folder,
                               eigenf_func_input = eigenf_func)
@@ -974,46 +1038,56 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
       # In general, one category only occurs 2 times
       # If timepoints=300, one category only occurs less than 4 times 3/300=0.01
       #If timepoints=750, one category only occurs less than 6 times 5/750=0.0067
-      tolcat <- table(categ_func_data_list$W[,indv])
-      catorder <- order(tolcat, decreasing = TRUE)
-      numcat <- length(catorder)
-      refcat <- catorder[numcat]
-      count_iter <- 0
-      while (count_iter < 100 && 
-             ( 
-               (length(tolcat) == 1)
-               || (("1" %in% names(table(categ_func_data_list$W[,indv])) == FALSE)==TRUE)
-             )
-      )
-      {
-        count_iter <- count_iter + 1
-        
-        #new_cluster_data <- GenerateClusterData(setting_choice, scenario, 3, 5, timeseries_length)
-        new_cluster_data <- GenerateClusterData(setting_choice, scenario, 2, 5, timeseries_length,  weekend_vector, eigenf_func)
-        weekend_columns[indv,] <-  new_cluster_data$weekend_columns[3,]
-        
-        
-        new_prob_curves <- list(p1 = new_cluster_data$p1, p2 = new_cluster_data$p2, p3 = new_cluster_data$p3)
-        new_categ_func_data_list <- GenerateCategFuncData( new_prob_curves )
-        
-        # what is this 3 ?? arbitrarily chosen?
-        categ_func_data_list$W[, indv] <- new_categ_func_data_list$W[, 3]
-        Z1[, indv] <- new_cluster_data$Z1[, 3] # latent curves Z1 and Z2
-        categ_func_data_list$X[indv, , ] <- 0
-        Z2[, indv] <- new_cluster_data$Z2[, 3]
-        
-        for (this_time in 1:timeseries_length)
-        {
-          categ_func_data_list$X[indv, this_time, which(Q_vals == categ_func_data_list$W[, indv][this_time])] <- 1
-        }
-        
-        tolcat <- table(categ_func_data_list$W[, indv])
-        catorder <- order(tolcat, decreasing = TRUE)
-        numcat <- length(catorder)
-        refcat <- catorder[numcat]
-      } # end while
-      total_regens <- total_regens + count_iter
-      cat("Indivdual", indv, "with regeneration",total_regens, "\n")
+      
+      # tolcat <- table(categ_func_data_list$W[,indv])
+      # catorder <- order(tolcat, decreasing = TRUE)
+      # numcat <- length(catorder)
+      # refcat <- catorder[numcat]
+      # count_iter <- 0
+      # while (count_iter < 100 && 
+      #        ( 
+      #          (length(tolcat) == 1)
+      #          || (("1" %in% names(table(categ_func_data_list$W[,indv])) == FALSE)==TRUE)
+      #        )
+      # )
+      # {
+      #   count_iter <- count_iter + 1
+      #   
+      #   #new_cluster_data <- GenerateClusterData(setting_choice, scenario, 3, 5, timeseries_length)
+      #   new_cluster_data <- GenerateClusterData(setting_choice, scenario, 2, 5, timeseries_length,  weekend_vector, eigenf_func)
+      #   weekend_columns[indv,] <-  new_cluster_data$weekend_columns[3,]
+      #   
+      #   
+      #   new_prob_curves <- list(p1 = new_cluster_data$p1, p2 = new_cluster_data$p2, p3 = new_cluster_data$p3)
+      #   new_categ_func_data_list <- GenerateCategFuncData( new_prob_curves )
+      #   
+      #   # what is this 3 ?? arbitrarily chosen?
+      #   categ_func_data_list$W[, indv] <- new_categ_func_data_list$W[, 3]
+      #   Z1[, indv] <- new_cluster_data$Z1[, 3] # latent curves Z1 and Z2
+      #   categ_func_data_list$X[indv, , ] <- 0
+      #   Z2[, indv] <- new_cluster_data$Z2[, 3]
+      #   
+      #   for (this_time in 1:timeseries_length)
+      #   {
+      #     categ_func_data_list$X[indv, this_time, which(Q_vals == categ_func_data_list$W[, indv][this_time])] <- 1
+      #   }
+      #   
+      #   tolcat <- table(categ_func_data_list$W[, indv])
+      #   catorder <- order(tolcat, decreasing = TRUE)
+      #   numcat <- length(catorder)
+      #   refcat <- catorder[numcat]
+      # } # end while
+      # total_regens <- total_regens + count_iter
+      # cat("Indivdual", indv, "with regeneration",total_regens, "\n")
+      
+      regen_indv_vals <- RegenIndv(indv, categ_func_data_list, weekend_columns,
+                            Z1, Z2,
+                            setting_choice, scenario, timeseries_length, 
+                            weekend_vector, eigenf_func, Q_vals)
+      categ_func_data_list <- regen_indv_vals$categ_func_data_list
+      weekend_columns <- regen_indv_vals$weekend_columns
+      Z1 <- regen_indv_vals$Z1
+      Z2 <- regen_indv_vals$Z2
       
     } # end for(indv in 1:num_indvs)
     
@@ -1022,10 +1096,10 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     #timestamps01 <- seq(from = 0.001, to = 0.99, length=timeseries_length)
     cat("length of time series", length(timestamps01), "\n")
     cat("Estimate Start with W shape", dim(categ_func_data_list$W), "\n")
-    timeKeeperStart("Xiaoxia")
+    timeKeeperStart("X method")
     categFD_est <- EstimateCategFuncData(est_choice, timestamps01, categ_func_data_list$W)
     cat("Estimation finish", dim(categ_func_data_list$W), "\n")
-    
+    # browser()
     #####################9/11/2023
     Z_est_curve[[replica_idx]]=array(c(categFD_est$Z1_est,categFD_est$Z2_est),dim=c(timeseries_length,num_indvs,2))
     p_est_curve[[replica_idx]]=array(c(categFD_est$p1_est,categFD_est$p2_est,categFD_est$p3_est),dim=c(timeseries_length,num_indvs,3))
@@ -1314,9 +1388,9 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
   # n1000t2000C <- ClusterSimulation(1000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   # 
   
-  n100t300C <- ClusterSimulation(100,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n100t750C <- ClusterSimulation(100,1008,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n100t2000C <- ClusterSimulation(100,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n100t300C <- ClusterSimulation(100,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n100t750C <- ClusterSimulation(100,1008,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n100t2000C <- ClusterSimulation(100,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
   
   n500t300C <- ClusterSimulation(500,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
