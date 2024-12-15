@@ -163,7 +163,7 @@ options <- parse_args(parser)
 #####################
 # 
 options_jobid <- 1
-options_numcpus <- 9
+options_numcpus <- 20
 options_replicas <- 1
 
 
@@ -453,7 +453,7 @@ GetXFromW <- function(W)
 #' @param  method="ML"
 #' @return list of 2D array: True Z curves , Est Z curves, True p curves, Est p curves
 #'                           all have dimension t*n
-EstimateCategFuncData <- function(choice, timestamps01, W, basis_size=25, method="ML")
+EstimateCategFuncData <- function(choice, timestamps01, W, basis_size=25, method="ML", indvs_to_eval)
 {
   if(choice == "probit"){
     X <- GetXFromW(W)
@@ -463,7 +463,7 @@ EstimateCategFuncData <- function(choice, timestamps01, W, basis_size=25, method
     return(EstimateCategFuncData_binorm(timestamps01, X, basis_size, method))
   }else if(choice == "multinomial"){
     #return(EstimateCategFuncData_multinormial(timestamps01, W, basis_size, method))
-    return(EstimateCategFuncData_multinormial_weekend_parallel(timestamps01, W, basis_size, method))
+    return(EstimateCategFuncData_multinormial_weekend_parallel(timestamps01, W, basis_size, method, indvs_to_eval))
   }
 }
 
@@ -473,34 +473,142 @@ EstimateCategFuncData <- function(choice, timestamps01, W, basis_size=25, method
 #' @param W : 2D categorical data matrix, t * n dimension, n is the number of subjects, t is the time
 #' @return list: fit values and linear predictors both with length of time_series length, Z is t*n, p: t*n
 
-EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W, basis_size=25, method="ML")
+EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W, basis_size=25, method="ML", indvs_to_eval)
 {
-  
-  
-  num_indv<- ncol(W)
+  # num_indv <- ncol(W)
   timeseries_length <-  nrow(W)
   category_count <- length(unique(c(W)))
   #weekend_vector <- as.factor(c(rep(c(rep(0,480),rep(1,192)),4))[1:timeseries_length])
   weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))[1:timeseries_length]
-  Z<-NULL
+  Z <- NULL
   # prob<-array(0, c(num_indv, timeseries_length , category_count))
   # weekend_vector_coef <- matrix(0, num_indv, category_count-1)
-  #for (i in 1:num_indv){
   
-  Z_P_WeekendCoef <- NULL
-  for (i in 1:num_indv) {
+  
+  # Run parallel only if its more than the number of CPUs
+  if(options_numcpus > length(indvs_to_eval)){
+    # browser()
+    Z_P_WeekendCoef <- NULL
+    for (idx in indvs_to_eval) {
+      # browser()
+      print(idx)
+      try_result <- tryCatch({
+        return_val <- numeric(timeseries_length*(category_count+category_count-1)+category_count-1)
+        if ( length(table(W[,idx])) == category_count) {
+          
+          fit_binom<-gam(list(W[,idx]-1~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector,
+                              ~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector
+          ),
+          family=multinom(K=category_count-1), method = method,
+          control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+          optimizer=c("outer","bfgs")) 
+          #####
+          ####to find design matrix
+          g_design <- predict(fit_binom,type = "lpmatrix")
+          g_mul <- g_design[,c(1,category_count:basis_size)]
+          coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size)]
+          #extract z
+          z1 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+          #####
+          g_mul_2 <- g_design[,c(1,category_count:basis_size)+basis_size]
+          coef_fit_2 <- fit_binom$coefficients[c(1,category_count:basis_size)+basis_size]
+          z2 <- g_mul_2 %*% as.matrix(coef_fit_2,ncol=1)
+          
+          weekend_vector_coef <- fit_binom$coefficients[c(category_count-1,basis_size+category_count-1)]
+          pp <- predict(fit_binom,type="response")
+          p1 <- pp[,1]
+          p2 <- pp[,2]
+          p3 <- pp[,3]
+        } else {
+          if (names(table(W[,idx]))[2]=="3"){
+            W[,idx][W[,idx]==3] <- 2
+            basis_size_rev <- max(min(round(min(unname(table(W[,idx])[2]), sum(1-unname(table(W[,idx])[2])))/2), basis_size ), 5)
+            fit_binom <- gam(W[,idx]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+                             family = "binomial", method = method,
+                             control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+                             optimizer=c("outer","bfgs"))
+            ######################
+            ####to find design matrix
+            g_design <- predict(fit_binom,type = "lpmatrix")
+            g_mul <- g_design[,c(1,category_count:basis_size_rev)]
+            coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size_rev)]
+            #extract z
+            z2 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+            #####
+            z1 <- rep(0,timeseries_length)
+            
+            weekend_vector_coef <- c(0, fit_binom$coefficients[category_count-1])
+            ##########################
+            p3 <- predict(fit_binom,type="response")
+            p1 <- 1-p3
+            p2 <- rep(0,timeseries_length)
+            
+          }else {
+            basis_size_rev <- max(min(round(min(unname(table(W[,idx])[2]), sum(1-unname(table(W[,idx])[2])))/2), basis_size ), 5)
+            fit_binom <- gam(W[,idx]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+                             family = "binomial", method = method,
+                             control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
+                             optimizer=c("outer","bfgs"))
+            ######################
+            ####to find design matrix
+            g_design <- predict(fit_binom,type = "lpmatrix")
+            g_mul <- g_design[,c(1,category_count:basis_size_rev)]
+            coef_fit <- fit_binom$coefficients[c(1,category_count:basis_size_rev)]
+            #extract z
+            z1 <- g_mul %*% as.matrix(coef_fit,ncol=1)
+            z2 <- rep(0,timeseries_length)
+            weekend_vector_coef <- c(fit_binom$coefficients[category_count-1],0)
+            ##########################
+            p2 <- predict(fit_binom,type="response")
+            p1 <- 1-p2
+            p3 <- rep(0,timeseries_length)
+          } # sub if else
+        } # big if else
+        
+        #2t*n matrix
+        # Z<- cbind(Z, c(z1,z2))
+        # ##find probability
+        # Z_cbind=cbind(z1,z2)
+        # exp_z=exp(Z_cbind)
+        # denominator_p=1+exp_z[,1]+exp_z[,2]
+        # p1 <- exp_z[,1]/denominator_p
+        # p2 <- exp_z[,2]/denominator_p
+        # p3=1/denominator_p
+        #3D matrix t*n*category 
+        #prob[idx,,] <- cbind(p1, p2, p3)
+        # 5*t +2 length
+        return_val <- c(z1,z2,p1,p2,p3, weekend_vector_coef)
+        print("Good")
+        ret <- list(idx, TRUE, return_val)
+        ret
+      },
+      error = function(e){
+        print(paste("Error in iteration",idx, ":", e$message))
+        ret <- list(idx, FALSE, e$message)
+        ret
+      })
+      
+      # return(try_result)
+      Z_P_WeekendCoef[[idx]] <- try_result
+      
+    } # end of for loop
+  
+  }else{
+  
+  # Z_P_WeekendCoef <- NULL
+  # for (idx in indvs_to_eval) {
     
-  # Z_P_WeekendCoef <- foreach(i = 1:num_indv , .packages = c("mgcv")) %dorng%
+  Z_P_WeekendCoef <- foreach(idx = indvs_to_eval , .packages = c("mgcv")) %dorng% {
     
     #T_rep <- foreach(this_row = 1:5) %dorng%
     # { #source("./source_code/R/data_generator.R")
     
-      print(i)
+      # print(idx)
     try_result <- tryCatch({
       return_val <- numeric(timeseries_length*(category_count+category_count-1)+category_count-1)
-      if ( length(table(W[,i])) == category_count) {
+      if ( length(table(W[,idx])) == category_count) {
         
-        fit_binom<-gam(list(W[,i]-1~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector,
+        fit_binom<-gam(list(W[,idx]-1~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector,
                             ~s(timestamps01,bs = "cc", m=2, k = basis_size) + weekend_vector
         ),
         family=multinom(K=category_count-1), method = method,
@@ -524,10 +632,10 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
         p2 <- pp[,2]
         p3 <- pp[,3]
         } else {
-        if (names(table(W[,i]))[2]=="3"){
-          W[,i][W[,i]==3] <- 2
-          basis_size_rev <- max(min(round(min(unname(table(W[,i])[2]), sum(1-unname(table(W[,i])[2])))/2), basis_size ), 5)
-          fit_binom <- gam(W[,i]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+        if (names(table(W[,idx]))[2]=="3"){
+          W[,idx][W[,idx]==3] <- 2
+          basis_size_rev <- max(min(round(min(unname(table(W[,idx])[2]), sum(1-unname(table(W[,idx])[2])))/2), basis_size ), 5)
+          fit_binom <- gam(W[,idx]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
                            family = "binomial", method = method,
                            control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
                            optimizer=c("outer","bfgs"))
@@ -548,8 +656,8 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
           p2 <- rep(0,timeseries_length)
           
         }else {
-          basis_size_rev <- max(min(round(min(unname(table(W[,i])[2]), sum(1-unname(table(W[,i])[2])))/2), basis_size ), 5)
-          fit_binom <- gam(W[,i]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
+          basis_size_rev <- max(min(round(min(unname(table(W[,idx])[2]), sum(1-unname(table(W[,idx])[2])))/2), basis_size ), 5)
+          fit_binom <- gam(W[,idx]-1~s(timestamps01, bs = "cc", m=2, k = basis_size_rev) + weekend_vector,
                            family = "binomial", method = method,
                            control=list(maxit = 500,mgcv.tol=1e-4,epsilon = 1e-04),
                            optimizer=c("outer","bfgs"))
@@ -579,34 +687,50 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
       # p2 <- exp_z[,2]/denominator_p
       # p3=1/denominator_p
       #3D matrix t*n*category 
-      #prob[i,,] <- cbind(p1, p2, p3)
+      #prob[idx,,] <- cbind(p1, p2, p3)
       # 5*t +2 length
       return_val <- c(z1,z2,p1,p2,p3, weekend_vector_coef)
       print("Good")
-      ret <- list(i, TRUE, return_val)
+      ret <- list(idx, TRUE, return_val)
       ret
     },
     error = function(e){
-      print(paste("Error in iteration",i, ":", e$message))
-      ret <- list(i, FALSE, NULL)
+      print(paste("Error in iteration",idx, ":", e$message))
+      ret <- list(idx, FALSE, e$message)
       ret
     })
       
-      # return(return_val)
-      Z_P_WeekendCoef[[i]] <- try_result
+      return(try_result)
+      # Z_P_WeekendCoef[[idx]] <- try_result
       
     } # end of for loop
-  browser()
-  bad_indexes <- which(lapply(Z_P_WeekendCoef, function(x) x[[2]] == FALSE))
-  Z_P_WeekendCoef <- do.call(rbind, Z_P_WeekendCoef)
-  #t*n
-  return(list(Z1_est=t(Z_P_WeekendCoef[,1:timeseries_length]), 
-              Z2_est=t(Z_P_WeekendCoef[,(1+timeseries_length):(2*timeseries_length)]),
-              p1_est=t(Z_P_WeekendCoef[,(1+timeseries_length*2):(3*timeseries_length)]), 
-              p2_est=t(Z_P_WeekendCoef[,(1+timeseries_length*3):(4*timeseries_length)]), 
-              p3_est=t(Z_P_WeekendCoef[,(1+timeseries_length*4):(5*timeseries_length)]) ,
-              weekend_vector_coef = Z_P_WeekendCoef[,(1+timeseries_length*(category_count+category_count-1)):dim(Z_P_WeekendCoef)[2]],
-              bad_indexes=bad_indexes))
+  }
+  
+  # browser()
+  non_null_ZPW <- Filter(Negate(is.null), Z_P_WeekendCoef)
+  bad_local_indexes <- which(sapply(non_null_ZPW, function(x) x[[2]] == FALSE))
+  bad_indexes <- c()
+  if(0 < length(bad_local_indexes)){
+    bad_indexes <- sapply(bad_local_indexes, function(x) non_null_ZPW[[x]][[1]])
+  }
+  
+  
+  return(list(bad_indexes=bad_indexes, partial_outcome=Z_P_WeekendCoef, indvs_to_eval=indvs_to_eval))
+  
+  # Z_P_WeekendCoef <- do.call(rbind, Z_P_WeekendCoef)
+  # #t*n
+  # partial_outcome <- list(Z1_est=t(Z_P_WeekendCoef[,1:timeseries_length]), 
+  #      Z2_est=t(Z_P_WeekendCoef[,(1+timeseries_length):(2*timeseries_length)]),
+  #      p1_est=t(Z_P_WeekendCoef[,(1+timeseries_length*2):(3*timeseries_length)]), 
+  #      p2_est=t(Z_P_WeekendCoef[,(1+timeseries_length*3):(4*timeseries_length)]), 
+  #      p3_est=t(Z_P_WeekendCoef[,(1+timeseries_length*4):(5*timeseries_length)]) ,
+  #      weekend_vector_coef = Z_P_WeekendCoef[,(1+timeseries_length*(category_count+category_count-1)):dim(Z_P_WeekendCoef)[2]])
+  # 
+  # partial_return <- list(partial_outcome=Z_P_WeekendCoef,
+  #             bad_indexes=bad_indexes,
+  #             indvs_evaled=indvs_to_eval)
+  # 
+  # return(partial_return)
 }
 
 
@@ -837,23 +961,38 @@ PsiFunc <- function(klen, timestamps01)
 # some_identifier = "test"
 # temp_folder = temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
 
-RegenIndv <- function(indv, out_categ_func_data_list, out_weekend_columns,
-                      out_Z1, out_Z2,
-                      setting_choice, scenario, timeseries_length, 
+RegenIndv <- function(regen_anyway, indv, cluster_allocation, num_indvs, out_categ_func_data_list, out_weekend_columns,
+                      out_Z1, out_Z2, out_total_regens,
+                      scenario, timeseries_length, 
                       weekend_vector, eigenf_func, Q_vals){
+  # if(indv == 75){ browser() }
+  if(indv %in% 1:cluster_allocation[1])
+  {
+    setting_choice <- 1
+  }
+  if(indv %in% (cluster_allocation[1] + 1):(cluster_allocation[1] + cluster_allocation[2]))
+  {
+    setting_choice <- 2
+  }
+  if(indv %in% (cluster_allocation[1] + cluster_allocation[2] + 1):num_indvs)
+  {
+    setting_choice <- 3
+  }
   
   tolcat <- table(out_categ_func_data_list$W[,indv])
   catorder <- order(tolcat, decreasing = TRUE)
   numcat <- length(catorder)
   refcat <- catorder[numcat]
   count_iter <- 0
-  while (count_iter < 100 && 
+  while (regen_anyway || 
+         (count_iter < 100 && 
          ( 
            (length(tolcat) == 1)
            || (("1" %in% names(table(out_categ_func_data_list$W[,indv])) == FALSE)==TRUE)
-         )
+         ))
   )
   {
+    regen_anyway <- FALSE
     count_iter <- count_iter + 1
     
     #new_cluster_data <- GenerateClusterData(setting_choice, scenario, 3, 5, timeseries_length)
@@ -880,12 +1019,12 @@ RegenIndv <- function(indv, out_categ_func_data_list, out_weekend_columns,
     numcat <- length(catorder)
     refcat <- catorder[numcat]
   } # end while
-  total_regens <- total_regens + count_iter
-  cat("Indivdual", indv, "with regeneration",total_regens, "\n")
+  out_total_regens <- out_total_regens + count_iter
+  cat("Indivdual", indv, "with regeneration", out_total_regens, "\n")
   
   return_values <- list(categ_func_data_list=out_categ_func_data_list, 
                         weekend_columns=out_weekend_columns,
-                        Z1=out_Z1, Z2=out_Z2)
+                        Z1=out_Z1, Z2=out_Z2, total_regens=out_total_regens)
 }
 
 ClusterSimulation <- function(num_indvs, timeseries_length,
@@ -1007,7 +1146,7 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     cat("CategFD", replica_idx, "\n")
     
     categ_func_data_list <- GenerateCategFuncData(prob_curves)
-    
+    # browser()
     # what is Q vals ? better name???
     Q_vals <- unique(c(categ_func_data_list$W))
     if(is.numeric(Q_vals))
@@ -1018,18 +1157,18 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     # I need to know what this loop is meant to do !??? maybe there is a better way
     for(indv in 1:num_indvs)
     {
-      if(indv %in% 1:cluster_allocation[1])
-      {
-        setting_choice <- 1
-      }
-      if(indv %in% (cluster_allocation[1] + 1):(cluster_allocation[1] + cluster_allocation[2]))
-      {
-        setting_choice <- 2
-      }
-      if(indv %in% (cluster_allocation[1] + cluster_allocation[2] + 1):num_indvs)
-      {
-        setting_choice <- 3
-      }
+      # if(indv %in% 1:cluster_allocation[1])
+      # {
+      #   setting_choice <- 1
+      # }
+      # if(indv %in% (cluster_allocation[1] + 1):(cluster_allocation[1] + cluster_allocation[2]))
+      # {
+      #   setting_choice <- 2
+      # }
+      # if(indv %in% (cluster_allocation[1] + cluster_allocation[2] + 1):num_indvs)
+      # {
+      #   setting_choice <- 3
+      # }
       
       # better names for the following variables ???
       # 1. check weather one category only appears 1 time and is it in the end of the timeseries
@@ -1080,14 +1219,15 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
       # total_regens <- total_regens + count_iter
       # cat("Indivdual", indv, "with regeneration",total_regens, "\n")
       
-      regen_indv_vals <- RegenIndv(indv, categ_func_data_list, weekend_columns,
-                            Z1, Z2,
-                            setting_choice, scenario, timeseries_length, 
+      regen_indv_vals <- RegenIndv(FALSE, indv, cluster_allocation, num_indvs, categ_func_data_list, weekend_columns,
+                            Z1, Z2, total_regens,
+                            scenario, timeseries_length, 
                             weekend_vector, eigenf_func, Q_vals)
       categ_func_data_list <- regen_indv_vals$categ_func_data_list
       weekend_columns <- regen_indv_vals$weekend_columns
       Z1 <- regen_indv_vals$Z1
       Z2 <- regen_indv_vals$Z2
+      total_regens <- regen_indv_vals$total_regens
       
     } # end for(indv in 1:num_indvs)
     
@@ -1097,7 +1237,50 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
     cat("length of time series", length(timestamps01), "\n")
     cat("Estimate Start with W shape", dim(categ_func_data_list$W), "\n")
     timeKeeperStart("X method")
-    categFD_est <- EstimateCategFuncData(est_choice, timestamps01, categ_func_data_list$W)
+    print(which(categ_func_data_list$W[,52] == 2))
+    
+    # Build estimate while regenerating
+    est_outcome <- EstimateCategFuncData(est_choice, timestamps01, categ_func_data_list$W, indvs_to_eval = 1:num_indvs)
+    current_outcome <- est_outcome$partial_outcome
+    count_est_iter <- 0
+    while(0 < length(est_outcome$bad_indexes) && count_est_iter < 1000){
+      # browser()
+      # regen all bad indexes
+      for(indv in est_outcome$bad_indexes){
+        count_est_iter <- count_est_iter + 1
+        regen_indv_vals <- RegenIndv(TRUE, indv, cluster_allocation, num_indvs, categ_func_data_list, weekend_columns,
+                                     Z1, Z2, total_regens,
+                                     scenario, timeseries_length, 
+                                     weekend_vector, eigenf_func, Q_vals)
+        categ_func_data_list <- regen_indv_vals$categ_func_data_list
+        weekend_columns <- regen_indv_vals$weekend_columns
+        Z1 <- regen_indv_vals$Z1
+        Z2 <- regen_indv_vals$Z2
+        total_regens <- regen_indv_vals$total_regens
+      }
+      print(which(categ_func_data_list$W[,52] == 2))
+      
+      est_outcome <- EstimateCategFuncData(est_choice, timestamps01, categ_func_data_list$W, indvs_to_eval = est_outcome$bad_indexes)
+      
+      for (idx in est_outcome$indvs_to_eval) {
+        current_outcome[[idx]] <- est_outcome$partial_outcome[[idx]]
+      }
+      # current_outcome <- est_outcome$partial_outcome
+    }
+    cat("Count of estimation iterations:", count_est_iter, "\n")
+    # browser()
+    Z_P_WeekendCoef <- lapply(current_outcome, function(x) x[[3]])
+    Z_P_WeekendCoef <- do.call(rbind, Z_P_WeekendCoef)
+    #t*n
+    category_count <- length(unique(c(categ_func_data_list$W)))
+    categFD_est <- list(Z1_est=t(Z_P_WeekendCoef[,1:timeseries_length]),
+                            Z2_est=t(Z_P_WeekendCoef[,(1+timeseries_length):(2*timeseries_length)]),
+                            p1_est=t(Z_P_WeekendCoef[,(1+timeseries_length*2):(3*timeseries_length)]),
+                            p2_est=t(Z_P_WeekendCoef[,(1+timeseries_length*3):(4*timeseries_length)]),
+                            p3_est=t(Z_P_WeekendCoef[,(1+timeseries_length*4):(5*timeseries_length)]) ,
+                            weekend_vector_coef = Z_P_WeekendCoef[,(1+timeseries_length*(category_count+category_count-1)):dim(Z_P_WeekendCoef)[2]])
+    
+    
     cat("Estimation finish", dim(categ_func_data_list$W), "\n")
     # browser()
     #####################9/11/2023
@@ -1393,9 +1576,9 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
   # n100t2000C <- ClusterSimulation(100,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
   
-  n500t300C <- ClusterSimulation(500,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n500t750C <- ClusterSimulation(500,1008,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-  n500t2000C <- ClusterSimulation(500,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n500t300C <- ClusterSimulation(500,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n500t750C <- ClusterSimulation(500,1008,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+  # n500t2000C <- ClusterSimulation(500,1512,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
   
   
   n1000t300C <- ClusterSimulation(1000,504,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
