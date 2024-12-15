@@ -154,17 +154,17 @@ option_list <- list(
 parser <- OptionParser(option_list=option_list)
 options <- parse_args(parser)
 
-# options_jobid <- options$jobid
-# options_numcpus <- options$numcpus
-# options_replicas <- options$replicas
+options_jobid <- options$jobid
+options_numcpus <- options$numcpus
+options_replicas <- options$replicas
 #options_subjects <- options$subjects
 # options_boots <- options$boots
 # options_timelength <- options$timelength
 #####################
 # 
-options_jobid <- 1
-options_numcpus <- 20
-options_replicas <- 1
+# options_jobid <- 1
+# options_numcpus <- 20
+# options_replicas <- 1
 
 
 
@@ -1746,10 +1746,18 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # A_2_binomial <- RunExperiment("A",2,"binomial","test")
 
 
+# set.seed(123)
+# B_2_multinomial <- RunExperiment("B", options_replicas,"multinomial","paper1")
+# save(B_2_multinomial, file = "Hazel_mul_B2.RData")
+# save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, options_replicas,"Hazel_mul_B2.RData",sep="_")))
+
 set.seed(123)
-B_2_multinomial <- RunExperiment("B", options_replicas,"multinomial","paper1")
-save(B_2_multinomial, file = "Hazel_mul_B2.RData")
-save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, options_replicas,"Hazel_mul_B2.RData",sep="_")))
+n1000t300C <- ClusterSimulation(1000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+save(n1000t300C , file = "n1000t300C.RData")
+n1000t750C <- ClusterSimulation(2000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+save(n1000t750C , file = "n1000t750C.RData")
+n1000t2000C <- ClusterSimulation(3000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+save(n1000t2000C , file = "n1000t2000C.RData")
 
 #})
 
