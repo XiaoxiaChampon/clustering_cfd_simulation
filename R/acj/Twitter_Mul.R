@@ -453,14 +453,14 @@ p3_est <- Twitter_ZP__WeekendCoeff_Final_Unique_Time_P$p3_est
 weekend_vector_coef_matrix <- Twitter_ZP__WeekendCoeff_Final_Unique_Time_P$weekend_vector_coef
 #save(Z1_est, Z2_est, p1_est, p2_est, p3_est, timestamps01 , index_remove, file = "Twitter_Est.RData")
 
-# cols_with_z1 <- apply(Z1_est, 2, function(x) any((x<  -200)))
-# which_columns1 <- which(cols_with_z1)  # Get column indices
-# print(length(which_columns1))
-# # 11
-cols_with_z2 <- apply(Z2_est, 2, function(x) any((x< -100000)))
+cols_with_z1 <- apply(Z1_est, 2, function(x) any((x<  -2000)))
+which_columns1 <- which(cols_with_z1)  # Get column indices
+print(length(which_columns1))
+# # 5
+cols_with_z2 <- apply(Z2_est, 2, function(x) any((x< -100)))
 which_columns2 <- which(cols_with_z2)  # Get column indices
-print(length(which_columns2)) #7
-# #18
+print(length(which_columns2)) #7, 8
+# #13
 # save(Z1_est, Z2_est, p1_est, p2_est, p3_est, timestamps01 ,
 #      weekend_vector_coef_matrix,
 #      which_columns1, which_columns2,file = "Twitter_Est_Mul_which_columns.RData")
@@ -468,9 +468,9 @@ print(length(which_columns2)) #7
 # load("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd/R/acj/Twitter_Est_Mul_which_columns.RData")
 # 
 par(mfrow = c(1,2))
-matplot(timestamps01,Z1_est,type='l', lty=1, col="light grey",
+matplot(timestamps01,Z1_est[,-c(which_columns1,which_columns2)],type='l', lty=1, col="light grey",
         xlab = "Time", ylab = "Value", main = "Z1", cex.lab = 1.5,cex.axis = 2,cex.main=2)
-matplot(timestamps01,Z2_est,type='l', lty=1, col="light grey",
+matplot(timestamps01,Z2_est[,-c(which_columns1,which_columns2)],type='l', lty=1, col="light grey",
         xlab = "Time", ylab = "Value", main = "Z2",cex.lab = 1.5,cex.axis = 2,cex.main=2)
 
 
@@ -531,11 +531,11 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
                                         Z1_est[,-c(which_columns1, which_columns2)],
                                         timestamps01 , PVE=0.95)
 # 
-# save(eigen_score, timestamps01, weekend_vector_coef_matrix, file = "Twitter_eigen_weekend.RData")
+ save(eigen_score, timestamps01, weekend_vector_coef_matrix, file = "Twitter_eigen_weekend_Final_Dec.RData")
 # 
 # cumsum(c(sd(eigen_score $scores[,1]),sd(eigen_score $scores[,2])))/sum(c(sd(eigen_score $scores[,1]),sd(eigen_score $scores[,2])))
-# #[1] 0.8236905 1.0000000
-# #3830 users
+# #[1] [1] 0.8018252 1.0000000
+# 3837    2
 # library(MASS)
 # Z_after <-  t(sqrt(length(timestamps01))*eigen_score $scores%*%ginv(eigen_score$Phi))
 # 
@@ -562,28 +562,27 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # 
 # 
 # 
-# library(ggplot2)
-# library(elbow)
-# library(dbscan)
-# tclusterdata=data.frame(cbind(eigen_score$scores, weekend_vector_coef_matrix[-c(which_columns1, which_columns2),]))
-# 
-# dbscan_cluster <- function(data=scores_K, scale_eps){
-#   
-#   dimz=dim(data)[2]
-#   if (dimz<=2){minPts=4}
-#   if (dimz>2){minPts=2*dimz+1}
-#   
-#   dist=kNNdist(data, k = minPts-1)
-#   #########change to max increase
-#   distdataelbow=data.frame(sort(dist))
-#   distdataelbow$index=1:(dim(data)[1])
-#   ipoint <- elbow(data = distdataelbow)
-#   epsoptimal=(ipoint$sort.dist._selected)*scale_eps
-#   
-#   out_dbscan <- dbscan(data, eps =epsoptimal , minPts = minPts)
-#   return(list(nclust=dim(table(out_dbscan$cluster)), label = out_dbscan$cluster))
-# }
-# 
+library(ggplot2)
+library(elbow)
+library(dbscan)
+
+dbscan_cluster <- function(data=scores_K, scale_eps){
+
+  dimz=dim(data)[2]
+  if (dimz<=2){minPts=4}
+  if (dimz>2){minPts=2*dimz+1}
+
+  dist=kNNdist(data, k = minPts-1)
+  #########change to max increase
+  distdataelbow=data.frame(sort(dist))
+  distdataelbow$index=1:(dim(data)[1])
+  ipoint <- elbow(data = distdataelbow)
+  epsoptimal=(ipoint$sort.dist._selected)*scale_eps
+
+  out_dbscan <- dbscan(data, eps =epsoptimal , minPts = minPts)
+  return(list(nclust=dim(table(out_dbscan$cluster)), label = out_dbscan$cluster))
+}
+
 # #3.8
 # # est_dbscan
 # # 0    1    2    3 
@@ -593,19 +592,22 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # # est_dbscan
 # # 0    1    2    3 
 # # 28 3743   43   16
-# est_dbscan <- dbscan_cluster(data=eigen_score$scores,4)$label
-# tclusterdata$Cluster=as.factor(est_dbscan)
-# colnames(tclusterdata)[1:2] =c("ksi1","ksi2")
-# tps2 <- ggplot(tclusterdata,aes(ksi1,ksi2,colour = Cluster)) + geom_point(aes(shape=Cluster),size=3)+ggtitle(paste0("Cluster Results",'\n',"(",dim(tclusterdata)[1]," Subjects",")")) +
-#   xlab(expression('Score '* widehat(xi[i1]))) + ylab(expression('Score '* widehat(xi[i2])))+ theme(plot.title = element_text(hjust = 0.5))+#theme(text = element_text(size = 20))+
-#   #theme(legend.text = element_text(size = 30))  
-#   #theme(axis.text=element_text(size = 20),axis.title = element_text(size =30))
-#   theme(text=element_text(size = 20))
-# tps2
-# table(est_dbscan)
+tclusterdata=data.frame(cbind(eigen_score$scores, (weekend_vector_coef_matrix[-c(which_columns1, which_columns2),])))
+
+est_dbscan <- dbscan_cluster(data=tclusterdata,1)$label
+tclusterdata$Cluster=as.factor(est_dbscan)
+colnames(tclusterdata)[1:2] =c("ksi1","ksi2")
+tps2 <- ggplot(tclusterdata,aes(ksi1,ksi2,colour = Cluster)) + geom_point(aes(shape=Cluster),size=3)+ggtitle(paste0("Cluster Results",'\n',"(",dim(tclusterdata)[1]," Subjects",")")) +
+  xlab(expression('Score '* widehat(xi[i1]))) + ylab(expression('Score '* widehat(xi[i2])))+ theme(plot.title = element_text(hjust = 0.5))+#theme(text = element_text(size = 20))+
+  #theme(legend.text = element_text(size = 30))
+  #theme(axis.text=element_text(size = 20),axis.title = element_text(size =30))
+  theme(text=element_text(size = 20))
+tps2
+table(est_dbscan)
 # est_dbscan
-# # 0    1    2    3 
-# # 43 3792   11   17 
+# est_dbscan
+# 0    1    2 
+# 17 3733   87
 # dim(tclusterdata)[1]
 # #3863 
 # 
@@ -614,19 +616,19 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # 
 # ####################################
 # #plot
-# vec0=c(which(tclusterdata$Cluster==0))
-# vec1=c(which(tclusterdata$Cluster==1))
-# vec2=c(which(tclusterdata$Cluster==2))
+vec0=c(which(tclusterdata$Cluster==0))
+vec1=c(which(tclusterdata$Cluster==1))
+vec2=c(which(tclusterdata$Cluster==2))
 # vec3=c(which(tclusterdata$Cluster==3))
 # 
 # #2000*3683
-# Z1_figure <- Z1_est[,-c(which_columns1, which_columns2)]
-# 
-# Z2_figure <- Z2_est[,-c(which_columns1, which_columns2)]
-# 
-# p1_figure <- p1_est[,-c(which_columns1, which_columns2)]
-# p2_figure <- p2_est[,-c(which_columns1, which_columns2)]
-# p3_figure <- p3_est[,-c(which_columns1, which_columns2)]
+Z1_figure <- Z1_est[,-c(which_columns1, which_columns2)]
+
+Z2_figure <- Z2_est[,-c(which_columns1, which_columns2)]
+
+p1_figure <- p1_est[,-c(which_columns1, which_columns2)]
+p2_figure <- p2_est[,-c(which_columns1, which_columns2)]
+p3_figure <- p3_est[,-c(which_columns1, which_columns2)]
 # argval <- timestamps01
 # 
 # save(Z1_figure, Z2_figure,
@@ -644,7 +646,7 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # #graph W by cluster
 # 
 # #W is n * t
-# W_matrix_after <- W_matrix_final[-c(which_columns1, which_columns2),]
+ W_matrix_after <- W_matrix_final[-c(which_columns1, which_columns2),]
 # #sample one user per cluster
 # user_index <- c(sample(vec1,1),sample(vec2,1),sample(vec3,1))
 # 
@@ -660,8 +662,7 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # 
 # 
 # 
-# start_number <- 1148
-# end_number <- 1148+15
+
 # unname(W_matrix_after[user_index[1],start_number:end_number])
 # unname(W_matrix_after[vec2,start_number:end_number][33,])
 # unname(W_matrix_after[user_index[3],start_number:end_number])
@@ -670,35 +671,115 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 #      file = "User_Cluster_W.RData")
 # 
 # #################graph for each user
-# graph_user_category <- function(index_number){
-#   user_data <- data.frame(
-#     Time = t[start_number:end_number],  # 10 days
-#     Category = as.factor(W_matrix_after[user_index[index_number],start_number:end_number] ) # Random categories
-#   )
-#   library(dplyr)
-#   # Rename categories using recode
-#   user_data <- user_data %>%
-#     mutate(Category = recode(Category, "1" = "No Tweet",
-#                              "2" = "Tweet Non Ref Brand",
-#                              "3" = "Tweet on Ref Brand"))
-#   user_fig <- ggplot(user_data, aes(x = Time, y = Category)) +
-#     geom_tile(aes(fill = Category), color = "white") +
-#     scale_fill_manual(values = c("No Tweet" = "red", 
-#                                  "Tweet Non Ref Brand" = "green",
-#                                  "Tweet on Ref Brand" = "blue")) +
-#     labs(title = "", x = "", y = "") +
-#     theme_minimal()+
-#     scale_x_continuous(
-#       breaks = c(min(t[start_number:end_number]), max(t[start_number:end_number])),          # Specify positions for the labels
-#       labels = c("March 11, 2017","March 12, 2017")  # Specify corresponding labels
-#     ) +
-#     theme(legend.position = "none",
-#           text=element_text(size = 15))
-#   print( user_fig)
-# }
-# 
-# graph_user_category(1)
-# graph_user_category(2)
+graph_user_category <- function(index_number){
+  user_data <- data.frame(
+    Time = t[start_number:end_number],  # 10 days
+    Category = as.factor(W_matrix_after[user_index[index_number],start_number:end_number] ) # Random categories
+  )
+  library(dplyr)
+  # Rename categories using recode
+  user_data <- user_data %>%
+    mutate(Category = recode(Category, "1" = "No Tweet",
+                             "2" = "Tweet Non Ref Brand",
+                             "3" = "Tweet on Ref Brand"))
+  user_fig <- ggplot(user_data, aes(x = Time, y = Category)) +
+    geom_tile(aes(fill = Category), color = "white") +
+    scale_fill_manual(values = c("No Tweet" = "red",
+                                 "Tweet Non Ref Brand" = "green",
+                                 "Tweet on Ref Brand" = "blue")) +
+    labs(title = "", x = "", y = "") +
+    theme_minimal()+
+    scale_x_continuous(
+      breaks = c(min(t[start_number:end_number]), max(t[start_number:end_number])),          # Specify positions for the labels
+      labels = c("March 11, 2017","March 12, 2017")  # Specify corresponding labels
+    ) +
+    theme(legend.position = "none",
+          text=element_text(size = 15))
+  print( user_fig)
+}
+
+
+
+cols_with_3 <- apply(W_matrix_final[vec2,], 1, function(x) {any(x==3)})
+which_columns_3 <- which(cols_with_3)  # Get column indices
+print(length(which_columns_3))
+
+#how many 3
+cols_count_3 <- apply(W_matrix_final[vec2,][which_columns_3,], 1, function(x) {table(x)})
+which(W_matrix_final[vec2,][which_columns_3[5],]==3)
+#cols_count_3
+# [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+# 1 1997 1966 1694 1981 1793 1975 1974 1982
+# 2    2   25  297   17  180   24    1    1
+# 3    1    9    9    2   27    1   25   17
+
+# 0.159480760315253 0.210013908205841 0.226240148354196 0.276773296244784 0.277236903106166 
+# 245               354               389               498               499 
+# 0.325452016689847 0.343532684283727  0.41029207232267 0.426518312471025 0.451553082985628 
+# 603               642               786               821               875 
+# 0.526657394529439 0.611033843300881 0.643949930458971 0.645340751043115 0.646267964765879 
+# 1037              1219              1290              1293              1295 
+# 0.710709318497914 0.711172925359295 0.726935558646268  0.79044969865554 0.827074640704682 
+# 1434              1435              1469              1606              1685 
+# 0.8442280945758 0.845155308298563 0.846546128882707 0.909596662030598  0.91006026889198 
+# 1722              1724              1727              1866              1867 
+# 0.910523875753361  0.94622160407974 
+# 1868              1945
+
+which(W_matrix_final[vec2,][which_columns_3[7],]==3)
+# 0.0709318497913769  0.108020398701901  0.175243393602225  0.208159480760315  0.243857209086694 
+# 54                134                279                350                427 
+# 0.272137227630969  0.310152990264256  0.339360222531293  0.378303198887344  0.406119610570236 
+# 488                570                633                717                777 
+# 0.447844228094576  0.477515067222995  0.518776077885953  0.540101993509504  0.576263328697265 
+# 867                931               1020               1066               1144 
+# 0.61381548446917  0.677793231339824  0.713027352804822  0.752433936022253  0.781177561427909 
+# 1225               1363               1439               1524               1586 
+# 0.822438572090867  0.844691701437181  0.890125173852573  0.923968474733426  0.943439962911451 
+# 1675               1723               1824               1897               1939 
+
+start_number <- 1670
+end_number <- 1730
+user_index_sub <- c(sample(vec1,2),sample(vec0,2))
+#123  172  613 3435  633 1634
+#[1] 3249   47 3035 1119 1634  452
+
+
+
+graph_data_set <- data.frame(W_matrix_final[c(user_index_sub[c(1,2)],
+                                              user_index_sub[c(3,4)]),start_number:end_number])
+
+# graph_data_set <- data.frame(W_matrix_final[c(2187 , 588,358, 2155)
+#                                             ,start_number:end_number])
+
+graph_data_set[5,] <- W_matrix_final[vec2,][which_columns_3[5],start_number:end_number]
+graph_data_set[6,] <- W_matrix_final[vec2,][which_columns_3[7],start_number:end_number]
+graph_data_set$id <- c(user_index_sub, vec2[which_columns_3][5],vec2[which_columns_3][7] )
+
+library(reshape2)
+df_long <- melt(graph_data_set, 
+                id.vars = "id", 
+                variable.name = "time", 
+                value.name = "state")
+df_long$time <- as.character(df_long$time)
+df_long$time <- substr(df_long$time, 2, nchar(df_long$time))
+df_long$time <- as.numeric(df_long$time)
+plotData(df_long, col = c("red",  "green", "blue")) +
+       labs(title = "")+
+  scale_x_continuous(
+         breaks = c(min(t[start_number:end_number]), max(t[start_number:end_number])),          # Specify positions for the labels
+         labels = c("March 11, 2017","March 12, 2017")  # Specify corresponding labels
+       ) +
+  theme(legend.position = "none",
+        text=element_text(size = 15))
+# user_index_sub
+# [1] 2187  588 2697 2699
+
+# user_index_sub
+# 2047 2439 2700 2343
+# 1037  616 2700 2697
+#last two user_index_sub
+#[1]  395 2686 3008 2345
 # graph_user_category(3)
 # 
 # 
@@ -828,22 +909,42 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # # [1] 174.6473
 # # > min(Z2_figure)
 # # [1] -261.4091
-# logit_p <- function(p){log(p / (1 - p))}
+logit_p <- function(p){log(p / (1 - p))}
+
+p1_figure_final <- logit_p(p1_figure)
+p2_figure_final <- logit_p(p2_figure)
+p3_figure_final <- logit_p(p3_figure)
 # 
-# p1_figure_final <- logit_p(p1_figure)
-# p2_figure_final <- logit_p(p2_figure)
-# p3_figure_final <- logit_p(p3_figure)
 # 
-# 
+cols_with_p3 <- apply(p3_figure_final, 2, function(x) any((x== -Inf)))
+which_columnsp3 <- which(cols_with_p3)  # Get column indices
+print(length(which_columnsp3))
+p3_figure_final[p3_figure_final== -Inf] = logit(0.00000001)
+
+cols_with_p2 <- apply(p2_figure_final, 2, function(x) any((x== -Inf)))
+which_columnsp2 <- which(cols_with_p2)  # Get column indices
+print(length(which_columnsp2))
+
+p2_figure_final[p2_figure_final== -Inf] = logit(0.00000001)
+
+cols_with_p1 <- apply(p1_figure_final, 2, function(x) any((x== Inf)))
+which_columnsp1 <- which(cols_with_p1)  # Get column indices
+print(length(which_columnsp1))
+
+p1_figure_final[p1_figure_final== Inf] = logit(0.99999999)
+#p_3 [0, 0.3240495]
+#p_2 [0,0.9582004]
+#p_1 [0.0417663, 1]
 # cols_with_p3 <- apply(p3_figure_final, 2, function(x) any((x== Inf)))
 # which_columnsp3 <- which(cols_with_p3)  # Get column indices
 # print(length(which_columnsp3))
+
 # #[1] 3 of them  259 2545 2691
 # 
-# z_min <- min(c(Z1_figure,Z2_figure))
-# z_max <- max(c(Z1_figure,Z2_figure))
-# p_min <- min (c (p1_figure_final, p2_figure_final, p3_figure_final[,-c(which_columnsp3)]))
-# p_max <- max (c (p1_figure_final, p2_figure_final, p3_figure_final[,-c(which_columnsp3)]))
+z_min <- min(c(Z1_figure,Z2_figure))
+z_max <- max(c(Z1_figure,Z2_figure))
+p_min <- min (c (p1_figure_final, p2_figure_final, p3_figure_final[,-c(which_columnsp3)]))
+p_max <- max (c (p1_figure_final, p2_figure_final, p3_figure_final[,-c(which_columnsp3)]))
 # p3_figure_final[p3_figure_final==Inf] = p_max
 # 
 # p_min1 <- min (c (p1_figure_final[,c(vec2,vec3)], p2_figure_final[,c(vec2,vec3)]))
@@ -851,207 +952,216 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # 
 # z_min1 <- min(c(Z1_figure[,c(vec2,vec3)],Z2_figure[,c(vec2,vec3)]))
 # z_max1 <- max(c(Z1_figure[,c(vec2,vec3)],Z2_figure[,c(vec2,vec3)]))
+
 # 
-# save(argval,Z1_figure, Z2_figure,
-#      p1_figure, p2_figure,which_columnsp3,
-#      p3_figure, p1_figure_final, p2_figure_final,
-#      p3_figure_final, argval, timestamps01,
-#      vec0, vec1, vec2, vec3,
-#      tclusterdata,z_min,
-#      z_max,p_min,p_max,z_min1,
-#      z_max1,p_min1,p_max1,
-#      file = "Twiiter_figure_logit_mul_which_columnsp3.RData")
+p_min1 <- min (c (p1_figure_final[,c(vec2,vec1)], p2_figure_final[,c(vec2,vec1)]))
+p_max1 <- max (c (p1_figure_final[,c(vec2,vec1)], p2_figure_final[,c(vec2,vec1)]))
+
+z_min1 <- min(c(Z1_figure[,c(vec2,vec1)],Z2_figure[,c(vec2,vec1)]))
+z_max1 <- max(c(Z1_figure[,c(vec2,vec1)],Z2_figure[,c(vec2,vec1)]))
+
+argval <- timestamps01
+# 
+save(argval,Z1_figure, Z2_figure,
+     p1_figure, p2_figure,which_columnsp3,
+     p3_figure, p1_figure_final, p2_figure_final,
+     p3_figure_final, argval, timestamps01,
+     vec0, vec1, vec2, 
+     tclusterdata,z_min,
+     z_max,p_min,p_max,z_min1,
+     z_max1,p_min1,p_max1,
+     file = "Twiiter_figure_logit_mul_final_Dec.RData")
 # 
 # setwd("/Users/xzhao17/Documents/GitHub/xc_cj_clustering_cfd")
 # load("Twiiter_figure_logit.RData")
 # #par(mfrow=c(4,5))
 # t <- timestamps01
-# par(mfrow=c(1,5))
-# ##vec1
-# meanp=colMeans(t(p1_figure_final)[vec1,])
-# matplot(t, t(t(p1_figure_final)[vec1,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=paste0("Log Odds of ", expression(hat("p")^1*(t))),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
-# lines(argval,meanp ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# meanp2=colMeans(t(p2_figure_final)[vec1,])
-# matplot(t, t(t(p2_figure_final)[vec1,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=paste0("Log Odds of ", expression(hat("p")^2*(t))),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
-# lines(argval,meanp2 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# 
-# meanp3=colMeans(t(p3_figure_final)[vec1,])
-# matplot(t,t(t(p3_figure_final)[vec1,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=paste0("Log Odds of ", expression(hat("p")^3*(t))),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
-# lines(argval,meanp3 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# meanz=colMeans(t(Z1_figure)[vec1,])
-# matplot(t, t(t(Z1_figure)[vec1,]),
-#         type='l', lty=1, col="light grey",
-#         
-#         #main=expression(hat("Z")^1*(t)),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min,z_max))
-# lines(argval,meanz ,
-#       type='l', lty=2, lwd=2, col = "red")
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# meanz2=colMeans(t(Z2_figure)[vec1,])
-# matplot(t, t(t(Z2_figure)[vec1,]),
-#         type='l', lty=1, col="light grey",
-#         
-#         #main=expression(hat("Z")^2*(t)),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min,z_max))
-# lines(argval,meanz2 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
+par(mfrow=c(1,5))
+##vec1
+meanp=colMeans(t(p1_figure_final)[vec1,])
+matplot(t, t(t(p1_figure_final)[vec1,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=paste0("Log Odds of ", expression(hat("p")^1*(t))),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
+lines(argval,meanp ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+meanp2=colMeans(t(p2_figure_final)[vec1,])
+matplot(t, t(t(p2_figure_final)[vec1,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=paste0("Log Odds of ", expression(hat("p")^2*(t))),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
+lines(argval,meanp2 ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+
+meanp3=colMeans(t(p3_figure_final)[vec1,])
+matplot(t,t(t(p3_figure_final)[vec1,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=paste0("Log Odds of ", expression(hat("p")^3*(t))),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
+lines(argval,meanp3 ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+meanz=colMeans(t(Z1_figure)[vec1,])
+matplot(t, t(t(Z1_figure)[vec1,]),
+        type='l', lty=1, col="light grey",
+
+        #main=expression(hat("Z")^1*(t)),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min1,z_max1))
+lines(argval,meanz ,
+      type='l', lty=2, lwd=2, col = "red")
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+meanz2=colMeans(t(Z2_figure)[vec1,])
+matplot(t, t(t(Z2_figure)[vec1,]),
+        type='l', lty=1, col="light grey",
+
+        #main=expression(hat("Z")^2*(t)),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min1,z_max1))
+lines(argval,meanz2 ,
+      type='l', lty=2, lwd=2, col = "red")
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
 # #######################################
 # 
 # ##vec2
 # argval=t
-# par(mfrow=c(1,5))
-# meanp=colMeans(t(p1_figure_final)[vec2,])
-# matplot(t, t(t(p1_figure_final)[vec2,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("p")^1*(t)),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
-# lines(argval,meanp ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# meanp2=colMeans(t(p2_figure_final)[vec2,])
-# matplot(t, t(t(p2_figure)[vec2,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("p")^2*(t)),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
-# lines(argval,meanp2 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# 
-# meanp3=colMeans(t(p3_figure_final)[vec2,])
-# matplot(t, t(t(p3_figure)[vec2,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("p")^3*(t)),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
-# lines(argval,meanp3 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# meanz=colMeans(t(Z1_figure)[vec2,])
-# matplot(t, t(t(Z1_figure)[vec2,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("Z")^1*(t)),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min1,z_max1))
-# lines(argval,meanz ,
-#       type='l', lty=2, lwd=2, col = "red")
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# meanz2=colMeans(t(Z2_figure)[vec2,])
-# matplot(t, t(t(Z2_figure)[vec2,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("Z")^2*(t)),
-#         xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min1,z_max1))
-# lines(argval,meanz2 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
+par(mfrow=c(1,5))
+meanp=colMeans(t(p1_figure_final)[vec2,])
+matplot(t, t(t(p1_figure_final)[vec2,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("p")^1*(t)),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
+lines(argval,meanp ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+meanp2=colMeans(t(p2_figure_final)[vec2,])
+matplot(t, t(t(p2_figure_final)[vec2,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("p")^2*(t)),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
+lines(argval,meanp2 ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+
+meanp3=colMeans(t(p3_figure_final)[vec2,])
+matplot(t, t(t(p3_figure_final)[vec2,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("p")^3*(t)),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min1,p_max1))
+lines(argval,meanp3 ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+meanz=colMeans(t(Z1_figure)[vec2,])
+matplot(t, t(t(Z1_figure)[vec2,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("Z")^1*(t)),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min1,z_max1))
+lines(argval,meanz ,
+      type='l', lty=2, lwd=2, col = "red")
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+meanz2=colMeans(t(Z2_figure)[vec2,])
+matplot(t, t(t(Z2_figure)[vec2,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("Z")^2*(t)),
+        xlab="", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min1,z_max1))
+lines(argval,meanz2 ,
+      type='l', lty=2, lwd=2, col = "red")
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
 # #######################################
 # 
 # 
@@ -1150,107 +1260,107 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 # #######################################
 # 
 # #vec0
-# par(mfrow=c(1,5))
-# meanp=colMeans(t(p1_figure_final)[vec0,])
-# matplot(t, t(t(p1_figure_final)[vec0,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("p")^1*(t)),
-#         xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min,p_max))
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# 
-# lines(argval,meanp ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# 
-# 
-# meanp2=colMeans(t(p2_figure_final)[vec0,])
-# matplot(t, t(t(p2_figure_final)[vec0,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("p")^2*(t)),
-#         xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min,p_max))
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# 
-# lines(argval,meanp2 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# 
-# 
-# 
-# meanp3=colMeans(t(p3_figure_final)[vec0,])
-# matplot(t, t(t(p3_figure_final)[vec0,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("p")^3*(t)),
-#         xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min,p_max))
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# lines(argval,meanp3 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# abline(h = 0, col = "blue", 
-#        type='l', lty=2, lwd=2)
-# 
-# meanz=colMeans(t(Z1_figure)[vec0,])
-# matplot(t, t(t(Z1_figure)[vec0,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         #main=expression(hat("Z")^1*(t)),
-#         xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min,z_max))
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# lines(argval,meanz ,
-#       type='l', lty=2, lwd=2, col = "red")
-# 
-# 
-# meanz2=colMeans(t(Z2_figure)[vec0,])
-# matplot(t, t(t(Z2_figure)[vec0,]),
-#         type='l', lty=1, col="light grey",
-#         #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
-#         #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
-#         
-#         # cex.lab=1.5, cex.axis=2,lty=1, lwd=3,ylim=c(-12,3),main=expression(hat("Z")^2*(t)),cex.main=2          main=mtext(bquote(" ")),
-#         xlab="Day",
-#         #main=expression(hat("Z")^2*(t)), 
-#         ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min,z_max))
-# axis(1,                         # Define x-axis manually
-#      #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
-#      #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
-#      at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
-#      cex.lab = 1.5,cex.axis = 2,cex.main=2,
-#      labels = c("0","6","12","18","24","30")) 
-# lines(argval,meanz2 ,
-#       type='l', lty=2, lwd=2, col = "red")
-# 
+par(mfrow=c(1,5))
+meanp=colMeans(t(p1_figure_final)[vec0,])
+matplot(t, t(t(p1_figure_final)[vec0,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("p")^1*(t)),
+        xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min,p_max))
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+
+lines(argval,meanp ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+
+
+meanp2=colMeans(t(p2_figure_final)[vec0,])
+matplot(t, t(t(p2_figure_final)[vec0,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("p")^2*(t)),
+        xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min,p_max))
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+
+lines(argval,meanp2 ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+
+
+
+meanp3=colMeans(t(p3_figure_final)[vec0,])
+matplot(t, t(t(p3_figure_final)[vec0,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("p")^3*(t)),
+        xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(p_min,p_max))
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+lines(argval,meanp3 ,
+      type='l', lty=2, lwd=2, col = "red")
+abline(h = 0, col = "blue",
+       type='l', lty=2, lwd=2)
+
+meanz=colMeans(t(Z1_figure)[vec0,])
+matplot(t, t(t(Z1_figure)[vec0,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        #main=expression(hat("Z")^1*(t)),
+        xlab="Day", ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min,z_max))
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+lines(argval,meanz ,
+      type='l', lty=2, lwd=2, col = "red")
+
+
+meanz2=colMeans(t(Z2_figure)[vec0,])
+matplot(t, t(t(Z2_figure)[vec0,]),
+        type='l', lty=1, col="light grey",
+        #main=mtext(bquote("Estimated Latent Cruve "*widehat('Z')[i])),
+        #xlab="Number of Datapoints", ylab=expression(widehat('Z')[i]))
+
+        # cex.lab=1.5, cex.axis=2,lty=1, lwd=3,ylim=c(-12,3),main=expression(hat("Z")^2*(t)),cex.main=2          main=mtext(bquote(" ")),
+        xlab="Day",
+        #main=expression(hat("Z")^2*(t)),
+        ylab="",cex.lab = 1.5,cex.axis = 2,cex.main=2,xaxt="n",ylim=c(z_min,z_max))
+axis(1,                         # Define x-axis manually
+     #at = c(0,476/2000,952/2000,1428/2000,1904/2000),
+     #at = c(0,400/2000,800/2000,1200/2000,1600/2000,2000/2000),
+     at = c(t[1],t[400],t[800],t[1200],t[1600],t[2000]),
+     cex.lab = 1.5,cex.axis = 2,cex.main=2,
+     labels = c("0","6","12","18","24","30"))
+lines(argval,meanz2 ,
+      type='l', lty=2, lwd=2, col = "red")
+
 # 
 # #######################################
 # 
@@ -1325,21 +1435,25 @@ eigen_score <- extract_scores_UNIVFPCA (Z1_est[,-c(which_columns1, which_columns
 #      labels = c("0","6","12","18","24","30")) 
 # ########################################################
 # #######kmeans
-# library(NbClust)
-# reskmeansall = NbClust::NbClust(data =  tclusterdata[,-5], diss = NULL,
-#                                 distance = "euclidean", min.nc = 2, max.nc = 5,
-#                                 method = "kmeans",index="silhouette")
-# tclusterdataall=data.frame(tclusterdata)
-# tclusterdataall$Cluster=as.factor(reskmeansall$Best.partition)
-# 
-# library(ggplot2)
-# tpsall <- ggplot(tclusterdataall,aes(ksi1 ,ksi2,colour = Cluster)) + geom_point(aes(shape=Cluster),size=3)+ggtitle(paste0("K-means Cluster Results",'\n',"(",dim(tclusterdataall)[1]," Subjects",")")) +
-#   #xlab(expression('Score '* widehat(xi[i1]))) + ylab(expression('Score '* widehat(xi[i2])))
-#   xlab('MFPCA Score1 ') + ylab('MFPCA Score2 ')+ theme(plot.title = element_text(hjust = 0.5))+#theme(text = element_text(size = 20))+
-#   #theme(legend.text = element_text(size = 30))  
-#   #theme(axis.text=element_text(size = 20),axis.title = element_text(size =30))
-#   theme(text=element_text(size = 20))
-# tpsall
+library(NbClust)
+reskmeansall = NbClust::NbClust(data =  tclusterdata[,-5], diss = NULL,
+                                distance = "euclidean", min.nc = 2, max.nc = 5,
+                                method = "kmeans",index="silhouette")
+tclusterdataall=data.frame(tclusterdata)
+tclusterdataall$Cluster=as.factor(reskmeansall$Best.partition)
+
+library(ggplot2)
+tpsall <- ggplot(tclusterdataall,aes(ksi1 ,ksi2,colour = Cluster)) + geom_point(aes(shape=Cluster),size=3)+ggtitle(paste0("K-means Cluster Results",'\n',"(",dim(tclusterdataall)[1]," Subjects",")")) +
+  #xlab(expression('Score '* widehat(xi[i1]))) + ylab(expression('Score '* widehat(xi[i2])))
+  xlab('MFPCA Score1 ') + ylab('MFPCA Score2 ')+ theme(plot.title = element_text(hjust = 0.5))+#theme(text = element_text(size = 20))+
+  #theme(legend.text = element_text(size = 30))
+  #theme(axis.text=element_text(size = 20),axis.title = element_text(size =30))
+  theme(text=element_text(size = 20))
+tpsall
+table(tclusterdataall$Cluster)
+
+# 1    2 
+# 4 3833 
 # 
 # 
 # # 
