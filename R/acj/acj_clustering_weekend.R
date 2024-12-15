@@ -954,12 +954,12 @@ PsiFunc <- function(klen, timestamps01)
 #timeseries_length = 1512
 # timeseries_length = 2016
 
-# scenario = "B"
-# num_replicas = 1
-# est_choice = "multinomial"
-# run_hellinger = TRUE
-# some_identifier = "test"
-# temp_folder = temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
+scenario = "B"
+num_replicas = 1
+est_choice = "multinomial"
+run_hellinger = TRUE
+some_identifier = "test"
+temp_folder = temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
 
 RegenIndv <- function(regen_anyway, indv, cluster_allocation, num_indvs, out_categ_func_data_list, out_weekend_columns,
                       out_Z1, out_Z2, out_total_regens,
