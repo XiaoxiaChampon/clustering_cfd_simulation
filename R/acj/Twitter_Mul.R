@@ -427,7 +427,8 @@ load("Twitter_Multinomial_W_t_Data.RData")
 
 #Twitter_ZP__WeekendCoeff_Final_Unique_Time_P <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, t(W_matrix_final[-c(3001,3374),][-3796,]), basis_size=25, method="ML")
 
-Twitter_ZP__WeekendCoeff_Final_Unique_Time_P <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, t(W_matrix_final[-c(3001,3374),][-3796,][-634,][-2267,][-3563,]), basis_size=25, method="ML")
+Twitter_ZP__WeekendCoeff_Final_Unique_Time_P <- EstimateCategFuncData_multinormial_weekend_parallel (timestamps01, t(W_matrix_final[-c(3001,3374),][-3796,][-634,][-2267,][-3563,]), 
+                                                                                                     basis_size=25, method="ML")
 
 timeKeeperNext() 
 W_data_used <- W_matrix_final[-c(3001,3374),][-3796,][-634,][-2267,][-3563,]
@@ -1562,3 +1563,15 @@ table(tclusterdataall$Cluster)
 # ###latent curves
 # #n*2t
 # #Z_after <-  t(sqrt(length(timestamps01))*eigen_score$scores%*%ginv(eigen_score$Phi))
+
+####################################################
+###################################################
+#Dec 16, 2024
+#ClickClust
+#package R package TraMineR (Gabadinho et al. 2011)
+#Melnykov, V. ClickClust: An R Package for Model-Based Clustering of Categorical Sequences. J. Stat. Softw. 2016, 74, 1–34. [Google Scholar] [CrossRef] [Green Version]
+#Scholz, M. R Package clickstream: Analyzing Clickstream Data with Markov Chains. J. Stat. Softw. 2016, 74, 1–17. [Google Scholar] [CrossRef] [Green Version]
+
+
+
+

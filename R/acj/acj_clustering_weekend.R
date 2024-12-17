@@ -72,7 +72,7 @@
 # vec0_weekend1_sd <- sd(tclusterdata[vec0,3])
 # vec0_weekend2_sd <- sd(tclusterdata[vec0,4])
 # ##################################
-# eigenf_func <- eigen_score$Phi 
+# eigenf_func <- eigen_score$Phi
 # weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))
 # 
 # save(vec1_score1_mean, vec1_score2_mean, vec1_score1_sd, vec1_score2_sd,
@@ -81,11 +81,11 @@
 #      vec2_weekend1_mean, vec2_weekend2_mean, vec2_weekend1_sd, vec2_weekend2_sd,
 #      vec0_score1_mean, vec0_score2_mean, vec0_score1_sd, vec0_score2_sd,
 #      vec0_weekend1_mean, vec0_weekend2_mean, vec0_weekend1_sd, vec0_weekend2_sd,
-#      eigenf_func,   file = "Twiiter_Sim_Input.RData" )
+#      eigenf_func,   file = "Twiiter_Sim_Input_New.RData" )
 #load("Twitter_eigen_weekend.RData")
 #Z_after <-  t(sqrt(length(timestamps01))*eigen_score $scores%*%ginv(eigen_score$Phi))
 ###########################################
-load("Twiiter_Sim_Input.RData")
+load("Twiiter_Sim_Input_New.RData")
 source("hazel_function.R")
 source("time_track_function.R")
 ############################################

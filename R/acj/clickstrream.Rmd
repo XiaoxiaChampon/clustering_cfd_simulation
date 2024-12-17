@@ -1,0 +1,153 @@
+<!-- Our input data is W: categorical time series. , and the time vector (both attached- ). -->
+<!-- load("Twitter_Multinomial_W_t_Data.RData") -->
+<!-- W_matrix_final -->
+<!--  timestamps01 -->
+
+<!--  Our goal is to use W to cluster. Our output is the cluster labels for each user. Do table(userlables) and use ggplot to plot the labels for each user. -->
+
+<!-- Look at section 3 from the paper attached. The goal is to: -->
+<!-- (1) use msm to see what's returned, if we can use anything returned to cluster. -->
+<!-- (2) Use ClickClust , clickstream to cluster.  -->
+
+<!-- Categorical Functional Data Analysis. The cfda R Package -->
+
+
+
+```{r}
+load("Twitter_Multinomial_W_t_Data.RData")
+```
+
+
+```{r}
+library(clickstream)
+```
+
+```{r}
+# some random data to test cliskstream
+set.seed(123)
+num_patients <- 10
+num_timestamps <- 25
+test_data <- matrix(sample(1:3, num_patients * num_timestamps, replace = TRUE), 
+                      nrow = num_patients, ncol = num_timestamps)
+print(test_data)
+```
+
+
+```{r}
+
+# Convert Matrix Rows into Clickstream Sequences
+# Combine each row into a string of events
+sequences <- apply(W_matrix_final, 1, function(row) paste(row, collapse = " "))
+
+# sequences <- apply(test_data, 1, function(row) paste(row, collapse = " "))
+# print(sequences[1:5])
+```
+
+```{r}
+# Write sequences to a temporary file as required by clickstream::readClickstreams
+temp_file <- tempfile(fileext = ".cls")
+writeLines(sequences, temp_file)
+
+# Read the Clickstream Data
+clickstream_data <- readClickstreams(temp_file, header = FALSE)
+
+# cluster
+source("time_track_function.R")
+clusters <- clusterClickstreams(clickstream_data, order = 0, centers = 3)
+
+print(paste("Num clusters:", length(clusters$clusters)))
+
+W_lables <- rep(0,dim(W_matrix_final)[1])
+#for (cltr in clusters$clusters) {
+for (cltr in 1:length(clusters$clusters) ){
+  cat("Cluster:" , cltr,"\n")
+  #print(paste(names(cltr)))
+  cluster_1 <- as.numeric(noquote(names(clusters$clusters[[cltr]])))
+  W_lables[cluster_1] <- cltr
+}
+table(W_lables)
+```
+
+
+
+```{r}
+library("ClickClust")
+
+```
+
+```{r}
+
+# convert clickstream data to click cluster compatible data
+clickclust_data <- as.ClickClust(clickstream_data)
+
+# run EM on the data
+emclust <- click.EM(clickclust_data$X, K = 2)
+
+# show(emclust)
+W_label_clickclust <- emclust$id
+```
+
+```{r}
+table(emclust$id)
+```
+
+
+```{r}
+library(msm)
+# MSM example:
+print(cav[1:10,])
+library(msm)
+ twoway4.q <- rbind(c(-0.5, 0.25, 0, 0.25), c(0.166,-0.498, 0.166, 0.166),
+ c(0, 0.25,-0.5, 0.25), c(0, 0, 0, 0))
+ statetable.msm(state, PTNUM, data=cav)
+ crudeinits.msm(state ~ years, PTNUM, data=cav, qmatrix=twoway4.q)
+ cav.msm <- msm( state ~ years, subject=PTNUM, data = cav,
+ qmatrix = twoway4.q, deathexact = 4,
+ control = list ( trace = 2, REPORT = 1 ) )
+ #cav.msm
+ #individual-level transition intensities
+ individual_intensity <- qmatrix.msm(cav.msm)
+ # pmatrix.msm(cav.msm, t=10)
+ # sojourn.msm(cav.msm)
+```
+```{r}
+pearson.msm(psor.msm, timegroups=2, intervalgroups=2, covgroups=2)
+```
+
+
+```{r}
+cav.msm_new <- msm( state ~ years, subject=PTNUM, data = cav,
+ gen.inits = TRUE, deathexact = 4,
+ control = list ( trace = 2, REPORT = 1 ) )
+```
+
+
+
+```{r}
+library(cluster)
+
+# Simulate a matrix of transition probabilities for individuals
+transitions <- pmatrix.msm(cav.msm, t=dim(W_matrix_final)[2])  # Example: 10 individuals, 3 states
+dist_matrix <- dist(transitions)  # Compute pairwise distances
+
+# Perform hierarchical clustering
+hc <- hclust(dist_matrix, method = "ward.D2")
+plot(hc)
+table(hc$labels)
+```
+```{r}
+library(TraMineR)
+data(biofam)
+## We use only a sample of 300 cases
+set.seed(10)
+biofam <- biofam[sample(nrow(biofam),300),]
+biofam.lab <- c("Parent", "Left", "Married", "Left+Marr",
+                "Child", "Left+Child", "Left+Marr+Child", "Divorced")
+biofam.seq <- seqdef(biofam, 10:25, labels=biofam.lab)
+# Compute pairwise distances using Optimal Matching
+biofam_dist <- seqdist(biofam.seq, method = "OM", sm = "CONSTANT", indel = 1)
+kmeans_cluster_dist <- kmeans_cluster (biofam_dist)
+table(kmeans_cluster_dist$label)
+```
+
+
