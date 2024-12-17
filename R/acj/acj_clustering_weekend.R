@@ -815,33 +815,33 @@ GetOccurrenceFractions <- function(scenario)
 # weekend_vector <- as.factor(c(rep(c(rep(0,5*24*60/20),rep(1,2*24*60/20)),4)))[1:timeseries_length]
 GetMuAndScore <- function(setting, scenario, k,  num_indvs, weekend_vector)
 {
-
+  
   #all_score_values = rep(0, 4)
   
   if(1 == setting)
   { 
-    weekend_1 <- rnorm(num_indvs, vec1_weekend1_mean*0.1, vec1_weekend1_sd*0.1)
+    weekend_1 <- rnorm(num_indvs, vec1_weekend1_mean, vec1_weekend1_sd)
     mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
-    weekend_2 <- rnorm(num_indvs, vec1_weekend2_mean, vec1_weekend2_sd*0.1)
+    weekend_2 <- rnorm(num_indvs, vec1_weekend2_mean, vec1_weekend2_sd)
     mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
     
-    score_front <- c(vec1_score1_mean*0.1, vec1_score1_sd*0.1,vec1_score2_mean, vec1_score2_sd*0.1)
+    score_front <- c(vec1_score1_mean, vec1_score1_sd,vec1_score2_mean, vec1_score2_sd)
   } else if(2 == setting)
   {
-    weekend_1 <- rnorm(num_indvs, vec2_weekend1_mean*0.025, vec2_weekend1_sd*0.05)
+    weekend_1 <- rnorm(num_indvs, vec2_weekend1_mean, vec2_weekend1_sd)
     mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
-    weekend_2 <- rnorm(num_indvs, vec2_weekend2_mean*0.1, vec2_weekend2_sd)
+    weekend_2 <- rnorm(num_indvs, vec2_weekend2_mean, vec2_weekend2_sd)
     mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
     
-    score_front <- c(vec2_score1_mean*0.025, vec2_score1_sd*0.05,vec2_score2_mean*0.1, vec2_score2_sd)
+    score_front <- c(vec2_score1_mean, vec2_score1_sd,vec2_score2_mean, vec2_score2_sd)
   } else if(3 == setting)
   {
-    weekend_1 <- rnorm(num_indvs, vec0_weekend1_mean*0.015, vec0_weekend1_sd*0.025)
+    weekend_1 <- rnorm(num_indvs, vec0_weekend1_mean, vec0_weekend1_sd)
     mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
-    weekend_2 <- rnorm(num_indvs, vec0_weekend2_mean*0.05, vec0_weekend2_sd*0.025)
+    weekend_2 <- rnorm(num_indvs, vec0_weekend2_mean, vec0_weekend2_sd)
     mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
     
-    score_front <- c(vec0_score1_mean*0.015, vec0_score1_sd*0.025,vec0_score2_mean*0.05, vec0_score2_sd*0.025)
+    score_front <- c(vec0_score1_mean, vec0_score1_sd,vec0_score2_mean, vec0_score2_sd)
   }
   
   # for(idx in 1:length(score_front))
