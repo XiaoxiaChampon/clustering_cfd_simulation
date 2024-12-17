@@ -959,7 +959,7 @@ PsiFunc <- function(klen, timestamps01)
 # timeseries_length = 2016
 
 scenario = "B"
-num_replicas = 10
+num_replicas = 100
 est_choice = "multinomial"
 run_hellinger = TRUE
 some_identifier = "test"
@@ -1440,12 +1440,7 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, options_replicas,"Hazel_mul_B2.RData",sep="_")))
 
 set.seed(123)
-n1000t300C <- ClusterSimulation(100,100,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-# # save(n1000t300C , file = "n1000t300C.RData")
-# n1000t750C <- ClusterSimulation(2000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-# # save(n1000t750C , file = "n1000t750C.RData")
-# n1000t2000C <- ClusterSimulation(3000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
-# save(n1000t2000C , file = "n1000t2000C.RData")
+n100t2000 <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
 
 #})
 
