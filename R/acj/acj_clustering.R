@@ -209,7 +209,7 @@ mse_bw_matrix <- function(truecurve,estcurve,timestamps01)
   # mseall=c(0)
   ######could probably use apply function here it's also subject level
   mseall <- foreach(i = 1:n, .combine = c, .packages = c("pracma")) %dorng% {
-    source("R/acj/trapzfnum_function.R")
+    source("trapzfnum_function.R")
     return(rbind(trapzfnum(truecurve[,i], estcurve[,i],timestamps01)))
   }
   
@@ -231,7 +231,7 @@ mse_bw_matrixp <- function(truecurve,estcurve,timestamps01)
   
   sqrt_2 <- sqrt(2)
   mseall <- foreach(i = 1:n, .combine = c, .packages = c("pracma")) %dorng% {
-    source("R/acj/trapzfnum_function.R")
+    source("trapzfnum_function.R")
     return(rbind(trapzfnump(truecurve[,i], estcurve[,i],timestamps01)/sqrt_2))
   }
   
@@ -843,7 +843,7 @@ EstimateCategFuncData_probit <- function(timestamps01, X, basis_size=25, method=
   
   zp <- foreach (indv = 1:num_indv, .combine = cbind, .init = NULL, .packages = c("mgcv")) %dorng%
   {
-    source("R/acj/run_gam_function.R")
+    source("run_gam_function.R")
     
     x1<- X[indv,,1]
     x2<- X[indv,,2]
@@ -955,7 +955,7 @@ EstimateCategFuncData_binorm <- function(timestamps01, X, basis_size=25, method=
 
   zp <- foreach (indv = 1:num_indv, .combine = cbind, .init = NULL, .packages = c("mgcv")) %dorng%
   {
-    source("R/acj/run_gam_function.R")
+    source("run_gam_function.R")
     
     x1<- X[indv,,1]
     x2<- X[indv,,2]
@@ -1335,47 +1335,44 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # }) # profvis end
 
 
-#test
-# set.seed(123)
-#  A_2_probit <- RunExperiment("A",2,"probit")
-#  
-# 
-#  
-#  set.seed(123)
-#  A_2_mul <- RunExperiment("A",2,"multinormial")
-# 
 
-# set.seed(123)
-# A_2_probit <- RunExperiment("A",2,"probit","test")
-# 
-# set.seed(123)
-# A_2_binomial <- RunExperiment("A",2,"binomial","test")
-# 
-# set.seed(123)
-# A_2_multinomial <- RunExperiment("A",2,"multinomial","test")
 
-set.seed(123)
-A_100_binomial <- RunExperiment("A",100,"binomial","paper1")
- 
- #save(C_2_probit,file="C_2_probit.RData")
-# set.seed(123)
-# A_100_probit <- RunExperiment("A",100,"probit")
-# 
-# 
-# set.seed(123)
-# A_20_multinomial <- RunExperiment("A",20,"multinormial")
-# 
-# set.seed(123)
-# C_20_probit <- RunExperiment("C",20,"probit")
-# 
-# set.seed(123)
-# C_20_multinomial <- RunExperiment("C",20,"multinormial")
-# 
-# set.seed(123)
-# B_20_probit <- RunExperiment("B",20,"probit")
-# 
-# set.seed(123)
-# B_20_multinormial <- RunExperiment("B",20,"multinormial")
+for (scenario in c("A","B")) {
+  print("--------------")
+  print(scenario)
+  print("==========")
+  num_replicas <- 100
+  est_choice <- "multinomial"
+  some_identifier <- "ABclusters"
+  
+  temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
+  # Empty the directory if it exists
+  if(dir.exists(temp_folder)){
+    unlink(temp_folder, recursive = TRUE)
+  }
+  dir.create(temp_folder)
+  print(temp_folder)
+  
+  
+  set.seed(123)
+  timeSince <- Sys.time()
+  n100t2000A <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+  taken_time100 <- Sys.time() - timeSince
+  save(n100t2000A, taken_time100, file = paste0(scenario,"_clickclusters_scenAB_n100t2000A.RData"))
+  
+  set.seed(123)
+  timeSince <- Sys.time()
+  n500t2000A <- ClusterSimulation(500,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+  taken_time500 <- Sys.time() - timeSince
+  save(n500t2000A, taken_time500, file = paste0(scenario,"_clickclusters_scenAB_n500t2000A.RData"))
+  
+  set.seed(123)
+  timeSince <- Sys.time()
+  n1000t2000A <- ClusterSimulation(1000,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+  taken_time1000 <- Sys.time() - timeSince
+  save(n1000t2000A, taken_time1000, file = paste0(scenario,"_clickclusters_scenAB_n1000t2000A.RData")) 
+
+}
 
 
 if(run_parallel)

@@ -1,31 +1,3 @@
-
-############################################################
-# Copyright 2024 Xiaoxia Champon
-
-# Permission is hereby granted, free of charge, to any person
-# obtaining a copy of this software and associated documentation
-# files (the “Software”), to deal in the Software without restriction,
-# including without limitation the rights to use, copy, modify, merge,
-# publish, distribute, sublicense, and/or sell copies of the Software,
-# and to permit persons to whom the Software is furnished to do so,
-# subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-# DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-# OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-# THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-############################################################
-# Purpose: Adding weekend effects in Twitter Simulation
-# Author:  Xiaoxia Champon
-# Date: 11/06/2024
-##############################################################
-
 #load("Twitter_figure_label_mul_weekend.RData")
 
 
@@ -958,8 +930,8 @@ PsiFunc <- function(klen, timestamps01)
 #timeseries_length = 1512
 # timeseries_length = 2016
 
-scenario = "B"
-num_replicas = 100
+scenario = "C"
+num_replicas = 5
 est_choice = "multinomial"
 run_hellinger = TRUE
 some_identifier = "test"
@@ -1062,6 +1034,8 @@ ComputeClickClustering <- function(W_mat)
   # convert clickstream data to click cluster compatible data
   clickclust_data <- as.ClickClust(clickstream_data)
   
+  print("here")
+  
   # run EM on the data
   emclust <- click.EM(clickclust_data$X, K = 2)
   
@@ -1118,7 +1092,7 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
   true_dbscan <- est_dbscan <-  NULL
   
   time_elapsed <<- list()
-  # "Xiaoxia"=NULL, "univfpca"=NULL, "kmeans"=NULL, "fadp"=NULL, "dbscan"=NULL, "cfd"=NULL)
+  # "X"=NULL, "univfpca"=NULL, "kmeans"=NULL, "fadp"=NULL, "dbscan"=NULL, "cfd"=NULL)
   last_time <- 0
   row_name <- NULL
   timeKeeperStart <- function(rn)
@@ -1214,9 +1188,10 @@ ClusterSimulation <- function(num_indvs, timeseries_length,
       
     } # end for(indv in 1:num_indvs)
     
+    # browser()
+    click_based_clusts <- ComputeClickClustering(t(categ_func_data_list$W))
     
-    click_based_clusts <- ComputeClickClustering(categ_func_data_list$W)
-    
+    # browser()
     cs_ri=rand.index(true_cluster,click_based_clusts$cs)
     cs_ari=adj.rand.index(true_cluster, click_based_clusts$cs)
     
@@ -1440,7 +1415,22 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # save(B_2_multinomial,file=file.path("outputs", paste(options_jobid, options_replicas,"Hazel_mul_B2.RData",sep="_")))
 
 set.seed(123)
-n100t2000 <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+timeSince <- Sys.time()
+n1000t2016 <- ClusterSimulation(1000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+taken_time1000 <- Sys.time() - timeSince
+save(n1000t2016, taken_time1000, file = "clickclusters_scenD_n1000t2016.RData")
+
+set.seed(123)
+timeSince <- Sys.time()
+n2000t2016 <- ClusterSimulation(2000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+taken_time2000 <- Sys.time() - timeSince
+save(n1000t2016, taken_time2000, file = "clickclusters_scenD_n2000t2016.RData")
+
+set.seed(123)
+timeSince <- Sys.time()
+n3000t2016 <- ClusterSimulation(3000,2016,scenario,num_replicas,est_choice,TRUE,temp_folder, eigenf_func_input = eigenf_func)
+taken_time3000 <- Sys.time() - timeSince
+save(n1000t2016, taken_time3000, file = "clickclusters_scenD_n3000t2016.RData")
 
 #})
 
@@ -1461,7 +1451,7 @@ if(run_parallel)
 }
 
 #n=100 t=672
-# Xiaoxia calc time taken: Time difference of 14.96065 secs 
+# X calc time taken: Time difference of 14.96065 secs 
 # count_iter:  1 
 # count_iter:  2 
 # count_iter:  3 
