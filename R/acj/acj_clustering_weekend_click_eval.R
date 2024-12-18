@@ -1007,26 +1007,37 @@ ComputeClickClustering <- function(W_mat)
 {
   # Convert Matrix Rows into Clickstream Sequences
   # Combine each row into a string of events
-  sequences <- apply(W_mat, 1, function(row) paste(row, collapse = " "))
-  
+  # sequences <- apply(W_mat, 1, function(row) paste(row, collapse = " "))
+  # 
   # Write sequences to a temporary file as required by clickstream::readClickstreams
-  temp_file <- tempfile(fileext = ".cls")
-  writeLines(sequences, temp_file)
+  # temp_file <- tempfile(fileext = ".cls")
+  # writeLines(sequences, temp_file)
   
-  # Read the Clickstream Data
-  clickstream_data <- readClickstreams(temp_file, header = FALSE)
+  xw <- apply(W_mat, 1, paste, collapse = ",")
+  
+  clickstream_data <- as.clickstreams(xw, header = FALSE)
   
   # cluster
-  clusters <- clusterClickstreams(clickstream_data, order = 0, centers = 3)
+  min_totss <- Inf
+  best_clustering <- NULL
+  for (cs_kval in 2:5) {
+    cc_clusters <- clusterClickstreams(clickstream_data, order = 0, centers = cs_kval)
+    print(cc_clusters$totss)
+    if(cc_clusters$totss <= min_totss){
+      min_totss <- cc_clusters$totss
+      best_clustering <- cc_clusters
+    }
+  }
+  # clusters <- clusterClickstreams(clickstream_data, order = 0, centers = 3)
   
-  print(paste("Num clusters:", length(clusters$clusters)))
+  print(paste("Num clusters:", length(best_clustering$clusters)))
   
   W_lables <- rep(0,dim(W_mat)[1])
-  #for (cltr in clusters$clusters) {
-  for (cltr in 1:length(clusters$clusters) ){
+  #for (cltr in best_clustering$clusters) {
+  for (cltr in 1:length(best_clustering$clusters) ){
     cat("Cluster:" , cltr,"\n")
     #print(paste(names(cltr)))
-    cluster_1 <- as.numeric(noquote(names(clusters$clusters[[cltr]])))
+    cluster_1 <- as.numeric(noquote(names(best_clustering$clusters[[cltr]])))
     W_lables[cluster_1] <- cltr
   }
   print(table(W_lables))
@@ -1034,15 +1045,32 @@ ComputeClickClustering <- function(W_mat)
   # convert clickstream data to click cluster compatible data
   clickclust_data <- as.ClickClust(clickstream_data)
   
-  print("here")
-  
   # run EM on the data
-  emclust <- click.EM(clickclust_data$X, K = 2)
+  best_emclust <- NULL
+  min_bic <- Inf
+  for (kval in 2:5) {
+    emclust <- click.EM(clickclust_data$X, K = kval)
+    print(emclust$BIC)
+    if(!is.na(emclust$BIC) && emclust$BIC <= min_bic){
+      best_emclust <- emclust
+      min_bic <- emclust$BIC
+    }
+  }
   
-  # show(emclust)
-  W_label_clickclust <- emclust$id
+  if(is.null(best_emclust)){
+    # browser()
+    best_emclust <- click.EM(clickclust_data$X, K = 2)
+    min_bic <- best_emclust$BIC
+  }
   
-  return(list(cs=W_lables,cc=W_label_clickclust))
+  W_label_clickclust <- best_emclust$id
+  
+  # print(best_emclust)
+  # print(best_clustering)
+  # browser()
+  
+  # return(list(csbc=best_clustering, cs=W_lables, ccbc=best_emclust, cc=W_label_clickclust))
+  return(list(cs=W_lables, cs_totss=min_totss, cc=W_label_clickclust, cc_BIC=min_bic))
 }
 
 ClusterSimulation <- function(num_indvs, timeseries_length,

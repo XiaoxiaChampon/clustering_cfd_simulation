@@ -556,6 +556,12 @@ ComputeClickClustering <- function(W_mat)
     }
   }
   
+  if(is.null(best_emclust)){
+    # browser()
+    best_emclust <- click.EM(clickclust_data$X, K = 2)
+    min_bic <- best_emclust$BIC
+  }
+  
   W_label_clickclust <- best_emclust$id
   
   # print(best_emclust)
@@ -1217,42 +1223,78 @@ RunExperiment <- function(scenario, num_replicas, est_choice, some_identifier="n
 # test <- ClusterSimulation(10,20,scenario,num_replicas,est_choice,TRUE,temp_folder)
 
 
-for (scenario in c("A","B")) {
-  print("--------------")
-  print(scenario)
-  print("==========")
-  num_replicas <- 2
-  est_choice <- "multinomial"
-  some_identifier <- "ABclusters"
-  
-  temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
-  # Empty the directory if it exists
-  if(dir.exists(temp_folder)){
-    unlink(temp_folder, recursive = TRUE)
-  }
-  dir.create(temp_folder)
-  print(temp_folder)
-  
-  
-  set.seed(123)
-  timeSince <- Sys.time()
-  n100t2000A <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  taken_time100 <- Sys.time() - timeSince
-  save(n100t2000A, taken_time100, file = paste0(scenario,"_clickclusters_scenAB_n100t2000A.RData"))
-  
-  set.seed(123)
-  timeSince <- Sys.time()
-  n500t2000A <- ClusterSimulation(500,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  taken_time500 <- Sys.time() - timeSince
-  save(n500t2000A, taken_time500, file = paste0(scenario,"_clickclusters_scenAB_n500t2000A.RData"))
-  
-  set.seed(123)
-  timeSince <- Sys.time()
-  n1000t2000A <- ClusterSimulation(1000,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
-  taken_time1000 <- Sys.time() - timeSince
-  save(n1000t2000A, taken_time1000, file = paste0(scenario,"_clickclusters_scenAB_n1000t2000A.RData")) 
 
+scenario <- "A"
+print("--------------")
+print(scenario)
+print("==========")
+num_replicas <- 100
+est_choice <- "multinomial"
+some_identifier <- "ABclusters"
+
+temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
+# Empty the directory if it exists
+if(dir.exists(temp_folder)){
+  unlink(temp_folder, recursive = TRUE)
 }
+dir.create(temp_folder)
+print(temp_folder)
+
+
+set.seed(123)
+timeSince <- Sys.time()
+n100t2000A <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+taken_time100 <- Sys.time() - timeSince
+save(n100t2000A, taken_time100, file = paste0(scenario,"_clickclusters_scenAB_n100t2000A.RData"))
+
+set.seed(123)
+timeSince <- Sys.time()
+n500t2000A <- ClusterSimulation(500,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+taken_time500 <- Sys.time() - timeSince
+save(n500t2000A, taken_time500, file = paste0(scenario,"_clickclusters_scenAB_n500t2000A.RData"))
+
+set.seed(123)
+timeSince <- Sys.time()
+n1000t2000A <- ClusterSimulation(1000,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+taken_time1000 <- Sys.time() - timeSince
+save(n1000t2000A, taken_time1000, file = paste0(scenario,"_clickclusters_scenAB_n1000t2000A.RData")) 
+
+
+
+scenario <- "B"
+print("--------------")
+print(scenario)
+print("==========")
+num_replicas <- 100
+est_choice <- "multinomial"
+some_identifier <- "ABclusters"
+
+temp_folder <- file.path("outputs", "clustersims", paste(scenario, "_", num_replicas, "_", est_choice, "_", some_identifier, sep=""))
+# Empty the directory if it exists
+if(dir.exists(temp_folder)){
+  unlink(temp_folder, recursive = TRUE)
+}
+dir.create(temp_folder)
+print(temp_folder)
+
+
+set.seed(123)
+timeSince <- Sys.time()
+n100t2000B <- ClusterSimulation(100,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+taken_time100 <- Sys.time() - timeSince
+save(n100t2000B, taken_time100, file = paste0(scenario,"_clickclusters_scenAB_n100t2000A.RData"))
+
+set.seed(123)
+timeSince <- Sys.time()
+n500t2000B <- ClusterSimulation(500,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+taken_time500 <- Sys.time() - timeSince
+save(n500t2000B, taken_time500, file = paste0(scenario,"_clickclusters_scenAB_n500t2000A.RData"))
+
+set.seed(123)
+timeSince <- Sys.time()
+n1000t2000B <- ClusterSimulation(1000,2000,scenario,num_replicas,est_choice,TRUE,temp_folder)
+taken_time1000 <- Sys.time() - timeSince
+save(n1000t2000B, taken_time1000, file = paste0(scenario,"_clickclusters_scenAB_n1000t2000A.RData")) 
 
 
 if(run_parallel)
