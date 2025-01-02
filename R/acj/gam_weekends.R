@@ -317,7 +317,11 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
       z2 <- g_mul_2 %*% as.matrix(coef_fit_2,ncol=1)
       
       weekend_vector_coef <- fit_binom$coefficients[c(category_count-1,basis_size+category_count-1)]
-    } else {
+      pp <- predict(fit_binom,type="response")
+      p1 <- pp[,1]
+      p2 <- pp[,2]
+      p3 <- pp[,3]
+      } else {
       if (names(table(W[i,]))[2]=="3"){
         W[i,][W[i,]==3] <- 2
         basis_size_rev <- max(min(round(min(unname(table(W[i,])[2]), sum(1-unname(table(W[i,])[2])))/2), basis_size ), 5)
@@ -337,6 +341,9 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
         z1 <- rep(0,timeseries_length)
         
         weekend_vector_coef <- c(0, fit_binom$coefficients[category_count-1])
+        p3 <- predict(fit_binom,type="response")
+        p1 <- 1-p3
+        p2 <- rep(0,timeseries_length)
         ##########################
       }else {
         basis_size_rev <- max(min(round(min(unname(table(W[i,])[2]), sum(1-unname(table(W[i,])[2])))/2), basis_size ), 5)
@@ -355,17 +362,21 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
         z2 <- rep(0,timeseries_length)
         weekend_vector_coef <- c(fit_binom$coefficients[category_count-1],0)
         ##########################
+        ##########################
+        p2 <- predict(fit_binom,type="response")
+        p1 <- 1-p2
+        p3 <- rep(0,timeseries_length)
       }
     } 
     #2t*n matrix
-    Z<- cbind(Z, c(z1,z2))
-    ##find probability
-    Z_cbind=cbind(z1,z2)
-    exp_z=exp(Z_cbind)
-    denominator_p=1+exp_z[,1]+exp_z[,2]
-    p1 <- exp_z[,1]/denominator_p
-    p2 <- exp_z[,2]/denominator_p
-    p3=1/denominator_p
+    # Z<- cbind(Z, c(z1,z2))
+    # ##find probability
+    # Z_cbind=cbind(z1,z2)
+    # exp_z=exp(Z_cbind)
+    # denominator_p=1+exp_z[,1]+exp_z[,2]
+    # p1 <- exp_z[,1]/denominator_p
+    # p2 <- exp_z[,2]/denominator_p
+    # p3=1/denominator_p
     #3D matrix t*n*category 
     #prob[i,,] <- cbind(p1, p2, p3)
     # 5*t +2 length
@@ -454,3 +465,4 @@ EstimateCategFuncData_multinormial_weekend_parallel <- function(timestamps01, W,
 #   Twitter all users except 14 has only 1 category, and two only has 3 one time 
 # took: Time difference of 5.322264 mins 
 # ====================
+

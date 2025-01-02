@@ -162,9 +162,9 @@ options_replicas <- options$replicas
 # options_timelength <- options$timelength
 #####################
 # 
-# options_jobid <- 1
-# options_numcpus <- 20
-# options_replicas <- 1
+options_jobid <- 1
+options_numcpus <- 9
+options_replicas <- 1
 
 
 
@@ -854,6 +854,47 @@ GetMuAndScore <- function(setting, scenario, k,  num_indvs, weekend_vector)
               "weekend_columns" = weekend_columns))
 }
 
+
+GetMuAndScore <- function(setting, scenario, k,  num_indvs, weekend_vector)
+{
+
+  #all_score_values = rep(0, 4)
+  
+  if(1 == setting)
+  { 
+    weekend_1 <- rnorm(num_indvs, vec1_weekend1_mean*0.1, vec1_weekend1_sd*0.1)
+    mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
+    weekend_2 <- rnorm(num_indvs, vec1_weekend2_mean, vec1_weekend2_sd*0.1)
+    mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
+    
+    score_front <- c(vec1_score1_mean*0.1, vec1_score1_sd*0.1,vec1_score2_mean, vec1_score2_sd*0.1)
+  } else if(2 == setting)
+  {
+    weekend_1 <- rnorm(num_indvs, vec2_weekend1_mean*0.025, vec2_weekend1_sd*0.05)
+    mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
+    weekend_2 <- rnorm(num_indvs, vec2_weekend2_mean*0.1, vec2_weekend2_sd)
+    mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
+    
+    score_front <- c(vec2_score1_mean*0.025, vec2_score1_sd*0.05,vec2_score2_mean*0.1, vec2_score2_sd)
+  } else if(3 == setting)
+  {
+    weekend_1 <- rnorm(num_indvs, vec0_weekend1_mean*0.015, vec0_weekend1_sd*0.025)
+    mu_1 <-  outer(as.numeric(weekend_vector), weekend_1, "*") 
+    weekend_2 <- rnorm(num_indvs, vec0_weekend2_mean*0.05, vec0_weekend2_sd*0.025)
+    mu_2 <- outer(as.numeric(weekend_vector), weekend_2, "*") 
+    
+    score_front <- c(vec0_score1_mean*0.015, vec0_score1_sd*0.025,vec0_score2_mean*0.05, vec0_score2_sd*0.025)
+  }
+  
+  # for(idx in 1:length(score_front))
+  # {
+  #   all_score_values[idx] <- score_front[idx]
+  # }
+  # 
+  weekend_columns <- cbind(weekend_1, weekend_2)
+  return(list("mu_1" = mu_1, "mu_2" = mu_2, "score_vals" = score_front,
+              "weekend_columns" = weekend_columns))
+}
 
 #' Generate cluster data for a given scenario
 #' @param num_indvs number of individuals
